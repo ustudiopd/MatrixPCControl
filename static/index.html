@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>A1616HD — 연결 · 상태 조회</title>
+  <title>A1616HD — Serial 라우팅</title>
   <style>
     :root { font-family: system-ui, sans-serif; background: #0f1419; color: #e6edf3; }
     body { max-width: 56rem; margin: 2rem auto; padding: 0 1rem; }
@@ -45,7 +45,10 @@
   <h1>A1616HD 매트릭스</h1>
 
   <h2>Serial 설정</h2>
-  <p class="meta"><code>Status.</code> 전송 후 응답이 없으면 연결 테스트에서 <code>%Version;</code> 을 시도합니다.</p>
+  <p class="meta">
+    <strong>연결 테스트</strong>는 <code>probe_command</code>(기본 <code>.</code>) 한 번 보내고 응답으로 Serial 연결을 확인합니다.
+    라우팅은 <code>{input}X{output}.</code> 형식입니다.
+  </p>
 
   <label>COM 포트</label>
   <input id="port" type="text" placeholder="COM3" autocomplete="off" />
@@ -74,14 +77,34 @@
   </div>
 
   <button id="save" type="button" class="secondary">설정 저장</button>
-  <button id="test" type="button">연결 · 신호 테스트</button>
+  <button id="connTest" type="button">연결 테스트</button>
 
   <div id="status" class="meta"></div>
   <div id="out" class="out" aria-live="polite"></div>
 
+  <h2>수동 라우팅</h2>
+  <p class="meta">
+    장비에서 확인된 형식: <code id="routeTemplate">—</code> (플레이스홀더 <code>input</code>, <code>output</code>)
+  </p>
+  <div class="row">
+    <div>
+      <label>Input (1–16)</label>
+      <input id="routeIn" type="number" min="1" max="16" step="1" value="1" />
+    </div>
+    <div>
+      <label>Output (1–16)</label>
+      <input id="routeOut" type="number" min="1" max="16" step="1" value="1" />
+    </div>
+  </div>
+  <button id="routeSend" type="button">전송 (Serial)</button>
+  <p class="meta" style="margin-top:1rem;">테스트</p>
+  <button id="preset12" type="button" class="secondary">1→2 <code>(1X2.)</code></button>
+  <button id="preset22" type="button" class="secondary">2→2 <code>(2X2.)</code></button>
+  <div id="routeSendMsg" class="meta"></div>
+
   <h2>라우팅 상태 (Output → Input)</h2>
+  <p class="meta">아래 표는 <strong>수동 라우팅 전송 성공 시</strong> 저장된 값입니다. 장비에서 별도 상태 조회를 하지 않습니다.</p>
   <p class="meta" id="routeMeta">마지막 조회: —</p>
-  <button id="refreshRoutes" type="button">상태 새로고침 (Status. 조회만)</button>
 
   <table id="routeTable" aria-label="라우팅 조회">
     <thead>
@@ -94,7 +117,6 @@
     <summary class="meta" style="cursor:pointer;">마지막 조회 raw 일부</summary>
     <div id="rawPreview" class="out" style="max-height:8rem;"></div>
   </details>
-
   <script>
     const $ = (id) => document.getElementById(id);
 
@@ -108,6 +130,9 @@
       $("parity").value = s.parity;
       $("stopbits").value = s.stopbits;
       $("timeout").value = s.timeout;
+      if (j.protocol && $("routeTemplate")) {
+        $("routeTemplate").textContent = j.protocol.route_template || "{input}X{output}.";
+      }
     }
 
     async function saveSettings() {
@@ -128,25 +153,6 @@
         const t = await r.text();
         throw new Error(t || r.statusText);
       }
-    }
-
-    function showResult(j) {
-      const el = $("out");
-      const ok = j.ok === true;
-      el.className = "out " + (ok ? "ok" : "err");
-      const lines = [
-        ok ? "✓ 장비로부터 데이터를 받았습니다." : "✗ 응답 없음 또는 오류",
-        "",
-        "명령: " + j.command + (j.used_fallback ? " (보조 명령 사용)" : ""),
-        "메시지: " + j.message,
-        "",
-        "--- raw (텍스트) ---",
-        j.raw || "(비어 있음)",
-        "",
-        "--- raw (hex 앞 256바이트) ---",
-        j.raw_bytes_hex || "(없음)",
-      ];
-      el.textContent = lines.join("\n");
     }
 
     function renderRoutes(state) {
@@ -176,9 +182,27 @@
       renderRoutes(j);
     }
 
+    function showResult(j) {
+      const el = $("out");
+      const ok = j.ok === true;
+      el.className = "out " + (ok ? "ok" : "err");
+      const lines = [
+        ok ? "✓ 장비로부터 데이터를 받았습니다." : "✗ 응답 없음 또는 오류",
+        "",
+        "명령: " + (j.command || "") + (j.used_fallback ? " (보조 명령 사용)" : ""),
+        "메시지: " + (j.message || ""),
+        "",
+        "--- raw (텍스트) ---",
+        j.raw || "(비어 있음)",
+        "",
+        "--- raw (hex 앞 256바이트) ---",
+        j.raw_bytes_hex || "(없음)",
+      ];
+      el.textContent = lines.join("\n");
+    }
+
     $("save").addEventListener("click", async () => {
       $("status").textContent = "";
-      $("out").textContent = "";
       try {
         await saveSettings();
         $("status").textContent = "설정이 data/config.json 에 저장되었습니다.";
@@ -187,49 +211,104 @@
       }
     });
 
-    $("test").addEventListener("click", async () => {
+    function setSerialUiBusy(busy) {
+      ["routeSend", "preset12", "preset22", "connTest"].forEach((id) => {
+        const el = $(id);
+        if (el) el.disabled = busy;
+      });
+    }
+
+    async function postRouting(input_no, output_no) {
+      await saveSettings();
+      const r = await fetch("/api/routing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input_no, output_no }),
+      });
+      const text = await r.text();
+      let j = {};
+      try {
+        j = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error("응답 파싱 실패: " + text.slice(0, 200));
+      }
+      if (!r.ok) {
+        const d = j.detail !== undefined ? j.detail : j;
+        throw new Error("HTTP " + r.status + ": " + (typeof d === "string" ? d : JSON.stringify(d)));
+      }
+      return j;
+    }
+
+    $("connTest").addEventListener("click", async () => {
       $("status").textContent = "";
       $("out").textContent = "전송 중…";
-      $("test").disabled = true;
+      setSerialUiBusy(true);
       try {
         await saveSettings();
-        const r = await fetch("/api/connection/test");
+        const r = await fetch("/api/connection/test", { method: "POST" });
         const j = await r.json();
         if (!r.ok) {
           $("out").className = "out err";
           $("out").textContent = "서버 오류: HTTP " + r.status + "\n" + JSON.stringify(j, null, 2);
-          $("status").textContent = "요청 실패";
+          $("status").textContent = "연결 테스트 실패";
         } else {
           showResult(j);
-          $("status").textContent = j.ok ? "테스트 완료 — 장비 응답 수신" : "응답 없음 또는 Serial 오류 — 아래 내용 확인";
+          $("status").textContent = j.ok ? "연결 테스트 완료 — 응답 수신" : "응답 없음 또는 Serial 오류";
         }
+        await loadRoutes();
       } catch (e) {
         $("out").className = "out err";
         $("out").textContent = "요청 실패: " + e.message;
       } finally {
-        $("test").disabled = false;
+        setSerialUiBusy(false);
       }
     });
 
-    $("refreshRoutes").addEventListener("click", async () => {
-      $("routeErr").textContent = "";
-      $("refreshRoutes").disabled = true;
+    $("routeSend").addEventListener("click", async () => {
+      $("routeSendMsg").textContent = "";
+      setSerialUiBusy(true);
       try {
-        await saveSettings();
-        const r = await fetch("/api/status/refresh", { method: "POST" });
-        const j = await r.json();
+        const input_no = parseInt($("routeIn").value, 10);
+        const output_no = parseInt($("routeOut").value, 10);
+        const j = await postRouting(input_no, output_no);
+        $("routeSendMsg").textContent = "전송 완료: " + (j.command || "") + " — " + (j.message || "");
         if (j.state) renderRoutes(j.state);
-        if (!j.serial_ok) {
-          $("routeErr").textContent = "Serial 실패: " + (j.message || "");
-        } else if (!j.parse_ok) {
-          $("routeErr").textContent = j.message || "파싱 실패 — raw 확인";
-        } else {
-          $("routeErr").textContent = "";
-        }
       } catch (e) {
-        $("routeErr").textContent = "요청 실패: " + e.message;
+        $("routeSendMsg").textContent = "요청 실패: " + e.message;
       } finally {
-        $("refreshRoutes").disabled = false;
+        setSerialUiBusy(false);
+      }
+    });
+
+    $("preset12").addEventListener("click", async () => {
+      $("routeSendMsg").textContent = "";
+      setSerialUiBusy(true);
+      try {
+        const j = await postRouting(1, 2);
+        $("routeIn").value = "1";
+        $("routeOut").value = "2";
+        $("routeSendMsg").textContent = "테스트 1→2: " + (j.command || "") + " — " + (j.message || "");
+        if (j.state) renderRoutes(j.state);
+      } catch (e) {
+        $("routeSendMsg").textContent = "요청 실패: " + e.message;
+      } finally {
+        setSerialUiBusy(false);
+      }
+    });
+
+    $("preset22").addEventListener("click", async () => {
+      $("routeSendMsg").textContent = "";
+      setSerialUiBusy(true);
+      try {
+        const j = await postRouting(2, 2);
+        $("routeIn").value = "2";
+        $("routeOut").value = "2";
+        $("routeSendMsg").textContent = "테스트 2→2: " + (j.command || "") + " — " + (j.message || "");
+        if (j.state) renderRoutes(j.state);
+      } catch (e) {
+        $("routeSendMsg").textContent = "요청 실패: " + e.message;
+      } finally {
+        setSerialUiBusy(false);
       }
     });
 

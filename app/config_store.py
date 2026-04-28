@@ -22,8 +22,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         },
         "protocol": {
             "name": "A1616HD_SERIAL_DOT",
-            "status_command": "Status.",
-            "version_command": "%Version;",
+            "route_template": "{input}X{output}.",
+            "probe_command": ".",
         },
     },
 }
@@ -71,8 +71,9 @@ def protocol_settings(cfg: dict[str, Any]) -> dict[str, str]:
     p = cfg.get("device", {}).get("protocol", {})
     d = DEFAULT_CONFIG["device"]["protocol"]
     return {
-        "status_command": p.get("status_command", d["status_command"]),
-        "version_command": p.get("version_command", d["version_command"]),
+        "name": str(p.get("name") or d.get("name") or "A1616HD_SERIAL_DOT"),
+        "route_template": str(p.get("route_template") or d.get("route_template", "{input}X{output}.")),
+        "probe_command": str(p.get("probe_command") or d.get("probe_command", ".")),
     }
 
 

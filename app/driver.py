@@ -74,6 +74,7 @@ class MatrixSerialDriver:
         ser: Serial,
         total_timeout: float,
         quiet_threshold: int = 3,
+        tail_extend_sec: float = 0.35,
     ) -> bytes:
         deadline = time.monotonic() + total_timeout
         buf = bytearray()
@@ -91,11 +92,11 @@ class MatrixSerialDriver:
             else:
                 time.sleep(0.02)
         # 늦게 도착하는 줄(멀티라인 응답) 추가 수신
-        tail_deadline = time.monotonic() + 0.35
+        tail_deadline = time.monotonic() + tail_extend_sec
         while time.monotonic() < tail_deadline:
             if ser.in_waiting:
                 buf.extend(ser.read(ser.in_waiting))
-                tail_deadline = time.monotonic() + 0.35
+                tail_deadline = time.monotonic() + tail_extend_sec
             else:
                 time.sleep(0.025)
         return bytes(buf)
@@ -105,6 +106,7 @@ class MatrixSerialDriver:
         command: str,
         read_timeout: float | None = None,
         quiet_threshold: int = 3,
+        tail_extend_sec: float = 0.35,
     ) -> SendResult:
         to = read_timeout if read_timeout is not None else max(self.timeout, 0.5)
         try:
@@ -113,7 +115,12 @@ class MatrixSerialDriver:
                 ser.reset_output_buffer()
                 ser.write(command.encode("ascii", errors="strict"))
                 ser.flush()
-                raw = self._read_until_quiet(ser, to, quiet_threshold=quiet_threshold)
+                raw = self._read_until_quiet(
+                    ser,
+                    to,
+                    quiet_threshold=quiet_threshold,
+                    tail_extend_sec=tail_extend_sec,
+                )
         except SerialException as e:
             return SendResult(
                 ok=False,
@@ -149,36 +156,21 @@ class MatrixSerialDriver:
             message="응답 수신",
         )
 
-    def test_connection(
-        self,
-        status_cmd: str,
-        version_cmd: str,
-    ) -> dict:
-        """Status. 후 무응답이면 %Version; 시도 (명세 4.2)."""
+    def test_link(self, probe_command: str) -> dict:
+        """Serial 연결 확인 — 기본은 `.` 전송 후 응답 수신(Status/Version 미사용)."""
 
-        def to_dict(r: SendResult, used_fallback: bool) -> dict:
-            return {
-                "ok": r.ok,
-                "message": r.message,
-                "command": r.command,
-                "raw": r.raw_text,
-                "raw_bytes_hex": r.raw_bytes_hex,
-                "used_fallback": used_fallback,
-            }
-
-        first = self.send_command(status_cmd)
-        if first.ok:
-            return to_dict(first, False)
-
-        second = self.send_command(version_cmd)
-        if second.ok:
-            return to_dict(second, True)
-
+        cmd = (probe_command or ".").strip() or "."
+        r = self.send_command(
+            cmd,
+            read_timeout=max(2.0, self.timeout * 2),
+            quiet_threshold=6,
+            tail_extend_sec=0.4,
+        )
         return {
-            "ok": False,
-            "message": f"{first.message} / 보조: {second.message}",
-            "command": status_cmd,
-            "raw": first.raw_text or second.raw_text,
-            "raw_bytes_hex": first.raw_bytes_hex or second.raw_bytes_hex,
+            "ok": r.ok,
+            "message": r.message,
+            "command": r.command,
+            "raw": r.raw_text,
+            "raw_bytes_hex": r.raw_bytes_hex,
             "used_fallback": False,
         }

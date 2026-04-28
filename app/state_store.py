@@ -21,6 +21,7 @@ def default_state() -> dict[str, Any]:
         "outputs": [{"output_no": i, "input_no": None} for i in range(1, 17)],
         "last_error": None,
         "last_raw_preview": None,
+        "last_cleaned_preview": None,
     }
 
 
@@ -36,7 +37,19 @@ def load_state() -> dict[str, Any]:
     outs = data.get("outputs") or []
     if len(outs) != 16:
         base = default_state()
-        base.update({k: data.get(k) for k in ("connected", "last_checked_at", "last_error", "last_raw_preview") if k in data})
+        base.update(
+            {
+                k: data.get(k)
+                for k in (
+                    "connected",
+                    "last_checked_at",
+                    "last_error",
+                    "last_raw_preview",
+                    "last_cleaned_preview",
+                )
+                if k in data
+            }
+        )
         return base
     return data
 

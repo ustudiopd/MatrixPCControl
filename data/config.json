@@ -15,8 +15,8 @@
     },
     "protocol": {
       "name": "A1616HD_SERIAL_DOT",
-      "status_command": "Status.",
-      "version_command": "%Version;"
+      "route_template": "{input}X{output}.",
+      "probe_command": "."
     }
   }
 }
