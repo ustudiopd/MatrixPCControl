@@ -69,7 +69,12 @@ class MatrixSerialDriver:
             timeout=self.timeout,
         )
 
-    def _read_until_quiet(self, ser: Serial, total_timeout: float) -> bytes:
+    def _read_until_quiet(
+        self,
+        ser: Serial,
+        total_timeout: float,
+        quiet_threshold: int = 3,
+    ) -> bytes:
         deadline = time.monotonic() + total_timeout
         buf = bytearray()
         quiet_loops = 0
@@ -81,13 +86,26 @@ class MatrixSerialDriver:
             elif buf:
                 quiet_loops += 1
                 time.sleep(0.02)
-                if quiet_loops >= 3 and not ser.in_waiting:
+                if quiet_loops >= quiet_threshold and not ser.in_waiting:
                     break
             else:
                 time.sleep(0.02)
+        # 늦게 도착하는 줄(멀티라인 응답) 추가 수신
+        tail_deadline = time.monotonic() + 0.35
+        while time.monotonic() < tail_deadline:
+            if ser.in_waiting:
+                buf.extend(ser.read(ser.in_waiting))
+                tail_deadline = time.monotonic() + 0.35
+            else:
+                time.sleep(0.025)
         return bytes(buf)
 
-    def send_command(self, command: str, read_timeout: float | None = None) -> SendResult:
+    def send_command(
+        self,
+        command: str,
+        read_timeout: float | None = None,
+        quiet_threshold: int = 3,
+    ) -> SendResult:
         to = read_timeout if read_timeout is not None else max(self.timeout, 0.5)
         try:
             with self._open() as ser:
@@ -95,7 +113,7 @@ class MatrixSerialDriver:
                 ser.reset_output_buffer()
                 ser.write(command.encode("ascii", errors="strict"))
                 ser.flush()
-                raw = self._read_until_quiet(ser, to)
+                raw = self._read_until_quiet(ser, to, quiet_threshold=quiet_threshold)
         except SerialException as e:
             return SendResult(
                 ok=False,

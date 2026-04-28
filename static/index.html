@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>A1616HD — 신호 확인</title>
+  <title>A1616HD — 연결 · 상태 조회</title>
   <style>
     :root { font-family: system-ui, sans-serif; background: #0f1419; color: #e6edf3; }
-    body { max-width: 52rem; margin: 2rem auto; padding: 0 1rem; }
+    body { max-width: 56rem; margin: 2rem auto; padding: 0 1rem; }
     h1 { font-size: 1.25rem; font-weight: 600; }
+    h2 { font-size: 1rem; margin-top: 2rem; font-weight: 600; color: #8b949e; }
     label { display: block; margin-top: 0.75rem; font-size: 0.85rem; color: #8b949e; }
     input, button { font: inherit; }
     input {
@@ -16,25 +17,35 @@
       box-sizing: border-box;
     }
     button {
-      margin-top: 1rem; padding: 0.5rem 1rem; border: none; border-radius: 6px;
+      margin-top: 1rem; margin-right: 0.5rem; padding: 0.5rem 1rem; border: none; border-radius: 6px;
       background: #238636; color: #fff; cursor: pointer;
     }
+    button.secondary { background: #21262d; border: 1px solid #30363d; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
     .row { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem; }
     .row label { margin-top: 0; }
     .out {
-      margin-top: 1.5rem; padding: 1rem; border-radius: 8px;
+      margin-top: 1rem; padding: 1rem; border-radius: 8px;
       background: #161b22; border: 1px solid #30363d; white-space: pre-wrap;
-      font-size: 0.9rem; min-height: 4rem;
+      font-size: 0.85rem; max-height: 14rem; overflow: auto;
     }
     .ok { color: #3fb950; }
     .err { color: #f85149; }
     .meta { font-size: 0.8rem; color: #8b949e; margin-top: 0.5rem; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 0.9rem;
+      background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden;
+    }
+    th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #30363d; }
+    th { background: #21262d; color: #8b949e; font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
   </style>
 </head>
 <body>
-  <h1>A1616HD 매트릭스 — Serial 응답 확인</h1>
-  <p class="meta"><code>Status.</code> 전송 후 응답이 없으면 <code>%Version;</code> 을 시도합니다.</p>
+  <h1>A1616HD 매트릭스</h1>
+
+  <h2>Serial 설정</h2>
+  <p class="meta"><code>Status.</code> 전송 후 응답이 없으면 연결 테스트에서 <code>%Version;</code> 을 시도합니다.</p>
 
   <label>COM 포트</label>
   <input id="port" type="text" placeholder="COM3" autocomplete="off" />
@@ -62,11 +73,27 @@
     </div>
   </div>
 
-  <button id="save" type="button">설정 저장</button>
+  <button id="save" type="button" class="secondary">설정 저장</button>
   <button id="test" type="button">연결 · 신호 테스트</button>
 
   <div id="status" class="meta"></div>
   <div id="out" class="out" aria-live="polite"></div>
+
+  <h2>라우팅 상태 (Output → Input)</h2>
+  <p class="meta" id="routeMeta">마지막 조회: —</p>
+  <button id="refreshRoutes" type="button">상태 새로고침 (Status. 조회만)</button>
+
+  <table id="routeTable" aria-label="라우팅 조회">
+    <thead>
+      <tr><th>출력</th><th>연결된 입력</th></tr>
+    </thead>
+    <tbody id="routeBody"></tbody>
+  </table>
+  <div id="routeErr" class="meta"></div>
+  <details style="margin-top:1rem;">
+    <summary class="meta" style="cursor:pointer;">마지막 조회 raw 일부</summary>
+    <div id="rawPreview" class="out" style="max-height:8rem;"></div>
+  </details>
 
   <script>
     const $ = (id) => document.getElementById(id);
@@ -122,6 +149,33 @@
       el.textContent = lines.join("\n");
     }
 
+    function renderRoutes(state) {
+      const tb = $("routeBody");
+      tb.innerHTML = "";
+      (state.routes || []).forEach((row) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + escapeHtml(row.output_display) + "</td><td>" + escapeHtml(row.input_display) + "</td>";
+        tb.appendChild(tr);
+      });
+      const at = state.last_checked_at || "—";
+      $("routeMeta").textContent = "마지막 조회: " + at + (state.connected ? " · 연결됨" : " · 미연결/오류");
+      $("routeErr").textContent = state.last_error || "";
+      $("rawPreview").textContent = state.last_raw_preview || "(없음)";
+    }
+
+    function escapeHtml(s) {
+      if (!s) return "";
+      const d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    async function loadRoutes() {
+      const r = await fetch("/api/status");
+      const j = await r.json();
+      renderRoutes(j);
+    }
+
     $("save").addEventListener("click", async () => {
       $("status").textContent = "";
       $("out").textContent = "";
@@ -157,9 +211,33 @@
       }
     });
 
-    loadSettings().catch((e) => {
-      $("status").textContent = "설정 로드 실패: " + e.message;
+    $("refreshRoutes").addEventListener("click", async () => {
+      $("routeErr").textContent = "";
+      $("refreshRoutes").disabled = true;
+      try {
+        await saveSettings();
+        const r = await fetch("/api/status/refresh", { method: "POST" });
+        const j = await r.json();
+        if (j.state) renderRoutes(j.state);
+        if (!j.serial_ok) {
+          $("routeErr").textContent = "Serial 실패: " + (j.message || "");
+        } else if (!j.parse_ok) {
+          $("routeErr").textContent = j.message || "파싱 실패 — raw 확인";
+        } else {
+          $("routeErr").textContent = "";
+        }
+      } catch (e) {
+        $("routeErr").textContent = "요청 실패: " + e.message;
+      } finally {
+        $("refreshRoutes").disabled = false;
+      }
     });
+
+    loadSettings()
+      .then(loadRoutes)
+      .catch((e) => {
+        $("status").textContent = "로드 실패: " + e.message;
+      });
   </script>
 </body>
 </html>

@@ -74,3 +74,22 @@ def protocol_settings(cfg: dict[str, Any]) -> dict[str, str]:
         "status_command": p.get("status_command", d["status_command"]),
         "version_command": p.get("version_command", d["version_command"]),
     }
+
+
+def io_name_maps(cfg: dict[str, Any]) -> tuple[dict[int, str], dict[int, str]]:
+    """Input/Output 번호 → 이름 (없으면 빈 문자열)."""
+
+    def rows_to_map(key: str) -> dict[int, str]:
+        m: dict[int, str] = {}
+        for row in cfg.get(key) or []:
+            if not isinstance(row, dict) or "no" not in row:
+                continue
+            try:
+                n = int(row["no"])
+            except (TypeError, ValueError):
+                continue
+            name = str(row.get("name") or "").strip()
+            m[n] = name
+        return m
+
+    return rows_to_map("inputs"), rows_to_map("outputs")
