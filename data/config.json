@@ -1,0 +1,22 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8000,
+    "auto_open_browser": true
+  },
+  "device": {
+    "serial": {
+      "port": "COM3",
+      "baudrate": 9600,
+      "bytesize": 8,
+      "parity": "N",
+      "stopbits": 1,
+      "timeout": 1.0
+    },
+    "protocol": {
+      "name": "A1616HD_SERIAL_DOT",
+      "status_command": "Status.",
+      "version_command": "%Version;"
+    }
+  }
+}
