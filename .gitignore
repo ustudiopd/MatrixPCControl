@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+.env
+.env.*
+*.egg-info/
+dist/
+build/
+
+# 로컬 장비 설정·상태 (저장소에는 예시만 두려면 data/.gitkeep 유지)
+data/*.json
+data/logs/
