@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>A1616HD — 신호 확인</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; background: #0f1419; color: #e6edf3; }
+    body { max-width: 52rem; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.25rem; font-weight: 600; }
+    label { display: block; margin-top: 0.75rem; font-size: 0.85rem; color: #8b949e; }
+    input, button { font: inherit; }
+    input {
+      width: 100%; max-width: 20rem; padding: 0.45rem 0.6rem;
+      border: 1px solid #30363d; border-radius: 6px; background: #161b22; color: inherit;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1rem; padding: 0.5rem 1rem; border: none; border-radius: 6px;
+      background: #238636; color: #fff; cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .row { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.5rem; }
+    .row label { margin-top: 0; }
+    .out {
+      margin-top: 1.5rem; padding: 1rem; border-radius: 8px;
+      background: #161b22; border: 1px solid #30363d; white-space: pre-wrap;
+      font-size: 0.9rem; min-height: 4rem;
+    }
+    .ok { color: #3fb950; }
+    .err { color: #f85149; }
+    .meta { font-size: 0.8rem; color: #8b949e; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>A1616HD 매트릭스 — Serial 응답 확인</h1>
+  <p class="meta"><code>Status.</code> 전송 후 응답이 없으면 <code>%Version;</code> 을 시도합니다.</p>
+
+  <label>COM 포트</label>
+  <input id="port" type="text" placeholder="COM3" autocomplete="off" />
+
+  <div class="row">
+    <div>
+      <label>Baudrate</label>
+      <input id="baud" type="number" min="300" step="1" />
+    </div>
+    <div>
+      <label>Data bits</label>
+      <input id="bytesize" type="number" min="7" max="8" />
+    </div>
+    <div>
+      <label>Parity (N/E/O)</label>
+      <input id="parity" type="text" maxlength="1" />
+    </div>
+    <div>
+      <label>Stop bits</label>
+      <input id="stopbits" type="number" min="1" max="2" />
+    </div>
+    <div>
+      <label>Timeout (초)</label>
+      <input id="timeout" type="number" min="0.1" step="0.1" />
+    </div>
+  </div>
+
+  <button id="save" type="button">설정 저장</button>
+  <button id="test" type="button">연결 · 신호 테스트</button>
+
+  <div id="status" class="meta"></div>
+  <div id="out" class="out" aria-live="polite"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function loadSettings() {
+      const r = await fetch("/api/settings");
+      const j = await r.json();
+      const s = j.serial;
+      $("port").value = s.port;
+      $("baud").value = s.baudrate;
+      $("bytesize").value = s.bytesize;
+      $("parity").value = s.parity;
+      $("stopbits").value = s.stopbits;
+      $("timeout").value = s.timeout;
+    }
+
+    async function saveSettings() {
+      const body = {
+        port: $("port").value.trim() || null,
+        baudrate: $("baud").value ? parseInt($("baud").value, 10) : null,
+        bytesize: $("bytesize").value ? parseInt($("bytesize").value, 10) : null,
+        parity: $("parity").value.trim() || null,
+        stopbits: $("stopbits").value ? parseInt($("stopbits").value, 10) : null,
+        timeout: $("timeout").value ? parseFloat($("timeout").value) : null,
+      };
+      const r = await fetch("/api/settings/serial", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const t = await r.text();
+        throw new Error(t || r.statusText);
+      }
+    }
+
+    function showResult(j) {
+      const el = $("out");
+      const ok = j.ok === true;
+      el.className = "out " + (ok ? "ok" : "err");
+      const lines = [
+        ok ? "✓ 장비로부터 데이터를 받았습니다." : "✗ 응답 없음 또는 오류",
+        "",
+        "명령: " + j.command + (j.used_fallback ? " (보조 명령 사용)" : ""),
+        "메시지: " + j.message,
+        "",
+        "--- raw (텍스트) ---",
+        j.raw || "(비어 있음)",
+        "",
+        "--- raw (hex 앞 256바이트) ---",
+        j.raw_bytes_hex || "(없음)",
+      ];
+      el.textContent = lines.join("\n");
+    }
+
+    $("save").addEventListener("click", async () => {
+      $("status").textContent = "";
+      $("out").textContent = "";
+      try {
+        await saveSettings();
+        $("status").textContent = "설정이 data/config.json 에 저장되었습니다.";
+      } catch (e) {
+        $("status").textContent = "저장 실패: " + e.message;
+      }
+    });
+
+    $("test").addEventListener("click", async () => {
+      $("status").textContent = "";
+      $("out").textContent = "전송 중…";
+      $("test").disabled = true;
+      try {
+        await saveSettings();
+        const r = await fetch("/api/connection/test");
+        const j = await r.json();
+        if (!r.ok) {
+          $("out").className = "out err";
+          $("out").textContent = "서버 오류: HTTP " + r.status + "\n" + JSON.stringify(j, null, 2);
+          $("status").textContent = "요청 실패";
+        } else {
+          showResult(j);
+          $("status").textContent = j.ok ? "테스트 완료 — 장비 응답 수신" : "응답 없음 또는 Serial 오류 — 아래 내용 확인";
+        }
+      } catch (e) {
+        $("out").className = "out err";
+        $("out").textContent = "요청 실패: " + e.message;
+      } finally {
+        $("test").disabled = false;
+      }
+    });
+
+    loadSettings().catch((e) => {
+      $("status").textContent = "설정 로드 실패: " + e.message;
+    });
+  </script>
+</body>
+</html>
