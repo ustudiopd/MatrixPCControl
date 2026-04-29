@@ -39,6 +39,23 @@
     th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #30363d; }
     th { background: #21262d; color: #8b949e; font-weight: 600; }
     tr:last-child td { border-bottom: none; }
+    #historyList, #undoList {
+      margin-top: 0.5rem; padding: 0.75rem; border-radius: 8px;
+      background: #161b22; border: 1px solid #30363d; font-size: 0.85rem;
+    }
+    #historyList { max-height: 14rem; overflow: auto; }
+    .hist-row { padding: 0.35rem 0; border-bottom: 1px solid #21262d; }
+    .hist-row:last-child { border-bottom: none; }
+    #undoList button { margin-top: 0.5rem; display: block; }
+    .io-grid { flex: 1; min-width: 14rem; max-width: 22rem; }
+    .io-grid table { font-size: 0.8rem; }
+    .io-grid input[type="text"] { max-width: 100%; padding: 0.25rem 0.4rem; }
+    .preset-card {
+      margin-top: 0.75rem; padding: 0.75rem; border-radius: 8px;
+      background: #161b22; border: 1px solid #30363d;
+    }
+    .preset-card button { margin-top: 0.35rem; margin-right: 0.35rem; }
+    textarea#presetNewRoutes { width: 100%; max-width: 28rem; min-height: 4rem; font: inherit; }
   </style>
 </head>
 <body>
@@ -76,8 +93,8 @@
     </div>
   </div>
 
-  <button id="save" type="button" class="secondary">설정 저장</button>
-  <button id="connTest" type="button">연결 테스트</button>
+  <button id="save" type="button" class="secondary" data-serial-busy>설정 저장</button>
+  <button id="connTest" type="button" data-serial-busy>연결 테스트</button>
 
   <div id="status" class="meta"></div>
   <div id="out" class="out" aria-live="polite"></div>
@@ -96,14 +113,14 @@
       <input id="routeOut" type="number" min="1" max="16" step="1" value="1" />
     </div>
   </div>
-  <button id="routeSend" type="button">전송 (Serial)</button>
+  <button id="routeSend" type="button" data-serial-busy>전송 (Serial)</button>
   <p class="meta" style="margin-top:1rem;">테스트</p>
-  <button id="preset12" type="button" class="secondary">1→2 <code>(1X2.)</code></button>
-  <button id="preset22" type="button" class="secondary">2→2 <code>(2X2.)</code></button>
+  <button id="preset12" type="button" class="secondary" data-serial-busy>1→2 <code>(1X2.)</code></button>
+  <button id="preset22" type="button" class="secondary" data-serial-busy>2→2 <code>(2X2.)</code></button>
   <div id="routeSendMsg" class="meta"></div>
 
   <h2>라우팅 상태 (Output → Input)</h2>
-  <p class="meta">아래 표는 <strong>수동 라우팅 전송 성공 시</strong> 저장된 값입니다. 장비에서 별도 상태 조회를 하지 않습니다.</p>
+  <p class="meta">수동 라우팅 성공 시 장비 응답에 <code>Ch:0,V:01</code> 형태(16줄)가 있으면 <strong>전체 출력</strong>을 그 값으로 갱신합니다. 없으면 방금 보낸 출력 한 칸만 반영합니다.</p>
   <p class="meta" id="routeMeta">마지막 조회: —</p>
 
   <table id="routeTable" aria-label="라우팅 조회">
@@ -117,6 +134,61 @@
     <summary class="meta" style="cursor:pointer;">마지막 조회 raw 일부</summary>
     <div id="rawPreview" class="out" style="max-height:8rem;"></div>
   </details>
+
+  <h2>Input / Output 이름</h2>
+  <p class="meta">라우팅 표에 표시되는 이름입니다. <code>data/config.json</code>에 저장됩니다.</p>
+  <div class="row" style="align-items: flex-start;">
+    <div class="io-grid">
+      <h3 class="meta" style="margin:0 0 0.5rem 0;">Input 1–16</h3>
+      <table aria-label="입력 이름">
+        <thead><tr><th>#</th><th>이름</th></tr></thead>
+        <tbody id="ioInBody"></tbody>
+      </table>
+    </div>
+    <div class="io-grid">
+      <h3 class="meta" style="margin:0 0 0.5rem 0;">Output 1–16</h3>
+      <table aria-label="출력 이름">
+        <thead><tr><th>#</th><th>이름</th></tr></thead>
+        <tbody id="ioOutBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <button id="saveIoNames" type="button" class="secondary">I/O 이름 저장</button>
+  <div id="ioNameMsg" class="meta"></div>
+
+  <h2>프리셋</h2>
+  <p class="meta">
+    <code>data/presets.json</code> — 실행 시 Serial은 한 번에 순차 전송됩니다. 되돌리기 스택에도 쌓입니다.
+  </p>
+  <div id="presetList"></div>
+  <div style="margin-top:1.5rem;">
+    <h3 class="meta" style="margin:0 0 0.5rem 0;">새 프리셋</h3>
+    <label>이름</label>
+    <input id="presetNewName" type="text" placeholder="예: 발표 모드" maxlength="200" />
+    <label>설명 (선택)</label>
+    <input id="presetNewDesc" type="text" placeholder="짧은 설명" />
+    <label class="meta" style="display:flex;align-items:center;gap:0.5rem;margin-top:0.75rem;">
+      <input id="presetNewConfirm" type="checkbox" /> 실행 전 확인창
+    </label>
+    <label>라우팅 (한 줄에 <code>input,output</code> — 예: <code>1,1</code> 다음 줄 <code>2,2</code>)</label>
+    <textarea id="presetNewRoutes" placeholder="1,1&#10;2,2"></textarea>
+    <button id="addPreset" type="button" data-serial-busy>프리셋 추가</button>
+    <span id="presetFormMsg" class="meta"></span>
+  </div>
+
+  <h2>최근 작업</h2>
+  <p class="meta">연결 테스트·수동 라우팅·프리셋·되돌리기 기록 (최대 50건, <code>data/history.json</code>).</p>
+  <div id="historyList" aria-live="polite"></div>
+
+  <h2>되돌리기</h2>
+  <p class="meta">
+    성공한 수동 라우팅·프리셋·되돌리기 작업이 스택에 쌓입니다 (최대 20건, <code>data/undo_stack.json</code>).
+    되돌리기 후에는 <strong>되돌리기 취소(재적용)</strong>용 항목이 이어서 쌓여, 다시 직전 라우팅으로 돌릴 수 있습니다.
+    이전 입력이 없으면 Serial 없이 표시만 복원합니다.
+  </p>
+  <div id="undoList"></div>
+  <div id="undoMsg" class="meta"></div>
+
   <script>
     const $ = (id) => document.getElementById(id);
 
@@ -132,6 +204,233 @@
       $("timeout").value = s.timeout;
       if (j.protocol && $("routeTemplate")) {
         $("routeTemplate").textContent = j.protocol.route_template || "{input}X{output}.";
+      }
+      renderIoTables(j.inputs || [], j.outputs || []);
+    }
+
+    function renderIoTables(inputRows, outputRows) {
+      const byIn = {};
+      (inputRows || []).forEach((row) => {
+        if (row && row.no >= 1 && row.no <= 16) byIn[row.no] = row.name || "";
+      });
+      const byOut = {};
+      (outputRows || []).forEach((row) => {
+        if (row && row.no >= 1 && row.no <= 16) byOut[row.no] = row.name || "";
+      });
+      fillIoTbody("ioInBody", "in", byIn);
+      fillIoTbody("ioOutBody", "out", byOut);
+    }
+
+    function fillIoTbody(tbodyId, prefix, byNo) {
+      const tb = $(tbodyId);
+      if (!tb) return;
+      tb.innerHTML = "";
+      for (let n = 1; n <= 16; n++) {
+        const tr = document.createElement("tr");
+        const td1 = document.createElement("td");
+        td1.textContent = String(n);
+        const td2 = document.createElement("td");
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.dataset.io = prefix;
+        inp.dataset.no = String(n);
+        inp.value = byNo[n] || "";
+        td2.appendChild(inp);
+        tr.appendChild(td1);
+        tr.appendChild(td2);
+        tb.appendChild(tr);
+      }
+    }
+
+    function collectIoPairs(prefix) {
+      const rows = [];
+      document.querySelectorAll('input[data-io="' + prefix + '"]').forEach((inp) => {
+        rows.push({ no: parseInt(inp.dataset.no, 10), name: inp.value.trim() });
+      });
+      return rows;
+    }
+
+    function parseRoutesLines(text) {
+      const routes = [];
+      (text || "").split(/\n/).forEach((line) => {
+        const t = line.trim();
+        if (!t) return;
+        const parts = t.split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean);
+        if (parts.length < 2) return;
+        const a = parseInt(parts[0], 10);
+        const b = parseInt(parts[1], 10);
+        if (a >= 1 && a <= 16 && b >= 1 && b <= 16) routes.push({ input_no: a, output_no: b });
+      });
+      return routes;
+    }
+
+    async function loadPresetsPanel() {
+      const r = await fetch("/api/presets");
+      const j = await r.json();
+      const box = $("presetList");
+      if (!box) return;
+      box.innerHTML = "";
+      const items = j.items || [];
+      if (!items.length) {
+        box.textContent = "(저장된 프리셋 없음)";
+        return;
+      }
+      const ids = items.map((p) => p.id);
+      items.forEach((p) => {
+        const id = p.id;
+        const card = document.createElement("div");
+        card.className = "preset-card";
+        const head = document.createElement("div");
+        const strong = document.createElement("strong");
+        strong.textContent = p.name || id;
+        head.appendChild(strong);
+        head.appendChild(document.createTextNode(" "));
+        const span = document.createElement("span");
+        span.className = "meta";
+        span.textContent = p.description || "";
+        head.appendChild(span);
+        card.appendChild(head);
+
+        const routesStr = (p.routes || []).map((x) => x.input_no + "," + x.output_no).join("\n");
+
+        const br = document.createElement("button");
+        br.type = "button";
+        br.setAttribute("data-serial-busy", "");
+        br.textContent = "실행";
+        br.addEventListener("click", async () => {
+          if (p.confirm_before_run && !confirm("프리셋을 실행할까요?")) return;
+          setSerialUiBusy(true);
+          $("presetFormMsg").textContent = "";
+          try {
+            await saveSettings();
+            const resp = await fetch("/api/presets/" + encodeURIComponent(id) + "/run", { method: "POST" });
+            const text = await resp.text();
+            let body = {};
+            try {
+              body = text ? JSON.parse(text) : {};
+            } catch {
+              throw new Error(text.slice(0, 200));
+            }
+            if (!resp.ok) {
+              throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail || body));
+            }
+            if (body.state) renderRoutes(body.state);
+            await loadHistoryPanel();
+            await loadUndoPanel();
+            await loadPresetsPanel();
+          } catch (e) {
+            $("presetFormMsg").textContent = "실행 실패: " + e.message;
+          } finally {
+            setSerialUiBusy(false);
+          }
+        });
+        card.appendChild(br);
+
+        const bd = document.createElement("button");
+        bd.type = "button";
+        bd.className = "secondary";
+        bd.textContent = "삭제";
+        bd.addEventListener("click", async () => {
+          if (!confirm("이 프리셋을 삭제할까요?")) return;
+          try {
+            const resp = await fetch("/api/presets/" + encodeURIComponent(id), { method: "DELETE" });
+            if (!resp.ok) throw new Error(await resp.text());
+            await loadPresetsPanel();
+          } catch (e) {
+            $("presetFormMsg").textContent = "삭제 실패: " + e.message;
+          }
+        });
+        card.appendChild(bd);
+
+        const bu = document.createElement("button");
+        bu.type = "button";
+        bu.className = "secondary";
+        bu.textContent = "↑";
+        bu.title = "위로";
+        bu.addEventListener("click", async () => {
+          const i = ids.indexOf(id);
+          if (i <= 0) return;
+          const next = ids.slice();
+          const t = next[i - 1];
+          next[i - 1] = next[i];
+          next[i] = t;
+          await persistPresetOrder(next);
+        });
+        card.appendChild(bu);
+
+        const bdn = document.createElement("button");
+        bdn.type = "button";
+        bdn.className = "secondary";
+        bdn.textContent = "↓";
+        bdn.title = "아래로";
+        bdn.addEventListener("click", async () => {
+          const i = ids.indexOf(id);
+          if (i < 0 || i >= ids.length - 1) return;
+          const next = ids.slice();
+          const t = next[i + 1];
+          next[i + 1] = next[i];
+          next[i] = t;
+          await persistPresetOrder(next);
+        });
+        card.appendChild(bdn);
+
+        const editWrap = document.createElement("div");
+        editWrap.style.marginTop = "0.5rem";
+        editWrap.innerHTML =
+          '<label class="meta">이름</label><input type="text" class="preset-edit-name" style="max-width:20rem" />' +
+          '<label class="meta">설명</label><input type="text" class="preset-edit-desc" style="max-width:20rem" />' +
+          '<label class="meta">라우팅 줄</label><textarea class="preset-edit-routes" style="width:100%;max-width:28rem;min-height:3rem;font:inherit"></textarea>' +
+          '<label class="meta" style="display:flex;align-items:center;gap:0.5rem"><input type="checkbox" class="preset-edit-confirm" /> 실행 전 확인</label>';
+        editWrap.querySelector(".preset-edit-name").value = p.name || "";
+        editWrap.querySelector(".preset-edit-desc").value = p.description || "";
+        editWrap.querySelector(".preset-edit-routes").value = routesStr;
+        editWrap.querySelector(".preset-edit-confirm").checked = !!p.confirm_before_run;
+        const bs = document.createElement("button");
+        bs.type = "button";
+        bs.className = "secondary";
+        bs.textContent = "편집 저장";
+        bs.addEventListener("click", async () => {
+          const routes = parseRoutesLines(editWrap.querySelector(".preset-edit-routes").value);
+          if (!routes.length) {
+            $("presetFormMsg").textContent = "라우팅이 비어 있습니다.";
+            return;
+          }
+          try {
+            const resp = await fetch("/api/presets/" + encodeURIComponent(id), {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: editWrap.querySelector(".preset-edit-name").value.trim(),
+                description: editWrap.querySelector(".preset-edit-desc").value.trim(),
+                confirm_before_run: editWrap.querySelector(".preset-edit-confirm").checked,
+                routes: routes,
+              }),
+            });
+            if (!resp.ok) throw new Error(await resp.text());
+            $("presetFormMsg").textContent = "저장됨.";
+            await loadPresetsPanel();
+          } catch (e) {
+            $("presetFormMsg").textContent = "저장 실패: " + e.message;
+          }
+        });
+        editWrap.appendChild(bs);
+        card.appendChild(editWrap);
+
+        box.appendChild(card);
+      });
+    }
+
+    async function persistPresetOrder(orderIds) {
+      try {
+        const resp = await fetch("/api/presets/order", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ order: orderIds }),
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        await loadPresetsPanel();
+      } catch (e) {
+        $("presetFormMsg").textContent = "순서 저장 실패: " + e.message;
       }
     }
 
@@ -212,9 +511,86 @@
     });
 
     function setSerialUiBusy(busy) {
-      ["routeSend", "preset12", "preset22", "connTest"].forEach((id) => {
-        const el = $(id);
-        if (el) el.disabled = busy;
+      document.querySelectorAll("[data-serial-busy]").forEach((el) => {
+        el.disabled = busy;
+      });
+      document.querySelectorAll("#undoList button").forEach((b) => {
+        b.disabled = busy;
+      });
+    }
+
+    async function loadHistoryPanel() {
+      const r = await fetch("/api/history");
+      const j = await r.json();
+      const box = $("historyList");
+      box.innerHTML = "";
+      const items = j.items || [];
+      if (!items.length) {
+        box.textContent = "(기록 없음)";
+        return;
+      }
+      items.forEach((it) => {
+        const div = document.createElement("div");
+        div.className = "hist-row";
+        const ok = it.success ? "✓" : "✗";
+        const line =
+          ok +
+          " " +
+          (it.created_at || "") +
+          " — " +
+          (it.type || "") +
+          ": " +
+          (it.title || "") +
+          (it.detail ? " — " + it.detail : "");
+        div.textContent = line;
+        box.appendChild(div);
+      });
+    }
+
+    async function loadUndoPanel() {
+      const r = await fetch("/api/undo");
+      const j = await r.json();
+      const box = $("undoList");
+      box.innerHTML = "";
+      const items = j.items || [];
+      if (!items.length) {
+        box.textContent = "(되돌릴 작업 없음)";
+        return;
+      }
+      items.forEach((it) => {
+        const aid = it.action_id;
+        if (!aid) return;
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "secondary";
+        b.textContent = "되돌리기: " + (it.title || aid);
+        b.addEventListener("click", async () => {
+          if (!confirm("이전 라우팅으로 복원할까요?")) return;
+          $("undoMsg").textContent = "";
+          setSerialUiBusy(true);
+          try {
+            const resp = await fetch("/api/undo/" + encodeURIComponent(aid), { method: "POST" });
+            const text = await resp.text();
+            let body = {};
+            try {
+              body = text ? JSON.parse(text) : {};
+            } catch {
+              throw new Error(text.slice(0, 200));
+            }
+            if (!resp.ok) {
+              throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail || body));
+            }
+            $("undoMsg").textContent = "복원 완료.";
+            if (body.state) renderRoutes(body.state);
+            await loadHistoryPanel();
+            await loadUndoPanel();
+          } catch (e) {
+            $("undoMsg").textContent = "되돌리기 실패: " + e.message;
+          } finally {
+            setSerialUiBusy(false);
+          }
+        });
+        box.appendChild(b);
       });
     }
 
@@ -256,11 +632,71 @@
           $("status").textContent = j.ok ? "연결 테스트 완료 — 응답 수신" : "응답 없음 또는 Serial 오류";
         }
         await loadRoutes();
+        await loadHistoryPanel();
+        await loadUndoPanel();
+        await loadPresetsPanel();
       } catch (e) {
         $("out").className = "out err";
         $("out").textContent = "요청 실패: " + e.message;
+        try {
+          await loadHistoryPanel();
+          await loadUndoPanel();
+        } catch (_) {}
       } finally {
         setSerialUiBusy(false);
+      }
+    });
+
+    $("saveIoNames").addEventListener("click", async () => {
+      $("ioNameMsg").textContent = "";
+      try {
+        const body = { inputs: collectIoPairs("in"), outputs: collectIoPairs("out") };
+        const r = await fetch("/api/settings/io-names", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) throw new Error(await r.text());
+        $("ioNameMsg").textContent = "저장되었습니다.";
+        await loadSettings();
+        await loadRoutes();
+      } catch (e) {
+        $("ioNameMsg").textContent = "실패: " + e.message;
+      }
+    });
+
+    $("addPreset").addEventListener("click", async () => {
+      $("presetFormMsg").textContent = "";
+      const name = ($("presetNewName").value || "").trim();
+      const routes = parseRoutesLines($("presetNewRoutes").value);
+      if (!name) {
+        $("presetFormMsg").textContent = "이름을 입력하세요.";
+        return;
+      }
+      if (!routes.length) {
+        $("presetFormMsg").textContent = "라우팅을 한 줄 이상 입력하세요 (input,output).";
+        return;
+      }
+      try {
+        const r = await fetch("/api/presets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name,
+            description: ($("presetNewDesc").value || "").trim(),
+            confirm_before_run: $("presetNewConfirm").checked,
+            routes: routes,
+          }),
+        });
+        if (!r.ok) throw new Error(await r.text());
+        $("presetNewName").value = "";
+        $("presetNewDesc").value = "";
+        $("presetNewRoutes").value = "";
+        $("presetNewConfirm").checked = false;
+        $("presetFormMsg").textContent = "추가됨.";
+        await loadPresetsPanel();
+      } catch (e) {
+        $("presetFormMsg").textContent = "추가 실패: " + e.message;
       }
     });
 
@@ -273,8 +709,13 @@
         const j = await postRouting(input_no, output_no);
         $("routeSendMsg").textContent = "전송 완료: " + (j.command || "") + " — " + (j.message || "");
         if (j.state) renderRoutes(j.state);
+        await loadHistoryPanel();
+        await loadUndoPanel();
+        await loadPresetsPanel();
       } catch (e) {
         $("routeSendMsg").textContent = "요청 실패: " + e.message;
+        await loadHistoryPanel();
+        await loadUndoPanel();
       } finally {
         setSerialUiBusy(false);
       }
@@ -289,8 +730,13 @@
         $("routeOut").value = "2";
         $("routeSendMsg").textContent = "테스트 1→2: " + (j.command || "") + " — " + (j.message || "");
         if (j.state) renderRoutes(j.state);
+        await loadHistoryPanel();
+        await loadUndoPanel();
+        await loadPresetsPanel();
       } catch (e) {
         $("routeSendMsg").textContent = "요청 실패: " + e.message;
+        await loadHistoryPanel();
+        await loadUndoPanel();
       } finally {
         setSerialUiBusy(false);
       }
@@ -305,8 +751,13 @@
         $("routeOut").value = "2";
         $("routeSendMsg").textContent = "테스트 2→2: " + (j.command || "") + " — " + (j.message || "");
         if (j.state) renderRoutes(j.state);
+        await loadHistoryPanel();
+        await loadUndoPanel();
+        await loadPresetsPanel();
       } catch (e) {
         $("routeSendMsg").textContent = "요청 실패: " + e.message;
+        await loadHistoryPanel();
+        await loadUndoPanel();
       } finally {
         setSerialUiBusy(false);
       }
@@ -314,6 +765,9 @@
 
     loadSettings()
       .then(loadRoutes)
+      .then(loadHistoryPanel)
+      .then(loadUndoPanel)
+      .then(loadPresetsPanel)
       .catch((e) => {
         $("status").textContent = "로드 실패: " + e.message;
       });

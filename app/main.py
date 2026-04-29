@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import secrets
+import time
 import webbrowser
+from copy import deepcopy
+from datetime import datetime
 from threading import Timer
 
 from fastapi import FastAPI, HTTPException
@@ -9,9 +13,21 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from app.config_store import io_name_maps, load_config, protocol_settings, save_config, serial_settings
-from app.driver import MatrixSerialDriver
+from app.driver import SendResult
+from app.history_store import load_history, prepend_history
+from app.matrix_service import format_route_command, matrix_probe, matrix_send_route
+from app.presets_store import (
+    load_presets,
+    next_sort_order,
+    normalize_preset_routes,
+    preset_by_id,
+    save_presets,
+)
+from app.routing_parse import apply_routing_table_to_state, parse_ch_v_routing_table
 from app.paths import ROOT
+from app.serial_queue import SERIAL_LOCK
 from app.state_store import default_state, load_state, save_state, utc_now_iso
+from app.undo_store import find_undo_entry, load_undo_stack, prepend_undo, remove_undo_by_action_id
 
 app = FastAPI(title="A1616HD Matrix Control")
 
@@ -46,27 +62,78 @@ class RouteBody(BaseModel):
     output_no: int = Field(ge=1, le=16)
 
 
-def _format_route_command(cfg: dict, input_no: int, output_no: int) -> str:
-    tpl = protocol_settings(cfg)["route_template"]
-    try:
-        return tpl.format(input=input_no, output=output_no)
-    except KeyError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"route_template 에 알 수 없는 플레이스홀더: {e}",
-        ) from e
+class IoNameRow(BaseModel):
+    no: int = Field(ge=1, le=16)
+    name: str = ""
 
 
-def _driver_from_cfg(cfg: dict) -> MatrixSerialDriver:
-    s = serial_settings(cfg)
-    return MatrixSerialDriver(
-        port=s["port"],
-        baudrate=s["baudrate"],
-        bytesize=s["bytesize"],
-        parity=s["parity"],
-        stopbits=s["stopbits"],
-        timeout=s["timeout"],
-    )
+class IoNamesBody(BaseModel):
+    inputs: list[IoNameRow] | None = None
+    outputs: list[IoNameRow] | None = None
+
+
+class PresetRoute(BaseModel):
+    input_no: int = Field(ge=1, le=16)
+    output_no: int = Field(ge=1, le=16)
+
+
+class PresetCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str = ""
+    confirm_before_run: bool = False
+    routes: list[PresetRoute] = Field(min_length=1)
+    sort_order: int | None = None
+
+
+class PresetUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = None
+    confirm_before_run: bool | None = None
+    routes: list[PresetRoute] | None = None
+    sort_order: int | None = None
+
+
+class PresetOrderBody(BaseModel):
+    order: list[str] = Field(min_length=1)
+
+
+def new_action_id() -> str:
+    return f"action_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(2)}"
+
+
+def new_preset_id() -> str:
+    return f"preset_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(2)}"
+
+
+def _route_title(cfg: dict, input_no: int, output_no: int) -> str:
+    inp_m, out_m = io_name_maps(cfg)
+    iname = (inp_m.get(input_no) or "").strip()
+    oname = (out_m.get(output_no) or "").strip()
+    left = f"Input {input_no}" + (f" ({iname})" if iname else "")
+    right = f"Output {output_no}" + (f" ({oname})" if oname else "")
+    return f"{left} → {right}"
+
+
+def _apply_route_send_to_state(
+    st: dict,
+    r: SendResult,
+    input_no: int,
+    output_no: int,
+) -> None:
+    tbl = parse_ch_v_routing_table(r.raw_text or "")
+    if tbl:
+        apply_routing_table_to_state(st, tbl)
+        st["last_cleaned_preview"] = "Ch:V 라우팅 테이블 16채널 반영"
+    else:
+        for row in st["outputs"]:
+            if int(row["output_no"]) == output_no:
+                row["input_no"] = input_no
+                break
+        st["last_cleaned_preview"] = None
+    st["connected"] = True
+    st["last_checked_at"] = utc_now_iso()
+    st["last_error"] = None
+    st["last_raw_preview"] = (r.raw_text or "")[:500]
 
 
 def _enrich_status(cfg: dict, state: dict) -> dict:
@@ -101,6 +168,35 @@ def _enrich_status(cfg: dict, state: dict) -> dict:
     }
 
 
+def _normalize_io_rows(rows: list[IoNameRow] | None) -> list[dict] | None:
+    if rows is None:
+        return None
+    seen: set[int] = set()
+    out: list[dict] = []
+    for row in rows:
+        if row.no in seen:
+            continue
+        seen.add(row.no)
+        out.append({"no": row.no, "name": (row.name or "").strip()})
+    out.sort(key=lambda x: x["no"])
+    return out
+
+
+def _preset_output_targets(routes: list[dict]) -> dict[int, int]:
+    t: dict[int, int] = {}
+    for r in routes:
+        t[int(r["output_no"])] = int(r["input_no"])
+    return t
+
+
+def _current_input_for_output(st: dict, output_no: int) -> int | None:
+    for row in st.get("outputs") or []:
+        if int(row["output_no"]) == output_no:
+            v = row.get("input_no")
+            return int(v) if v is not None else None
+    return None
+
+
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
     html_path = static_dir / "index.html"
@@ -115,6 +211,8 @@ def get_settings() -> dict:
     return {
         "serial": serial_settings(cfg),
         "protocol": protocol_settings(cfg),
+        "inputs": cfg.get("inputs") or [],
+        "outputs": cfg.get("outputs") or [],
     }
 
 
@@ -139,6 +237,34 @@ def put_serial(body: SerialUpdate) -> dict:
     return {"serial": serial_settings(cfg)}
 
 
+def _save_io_names(body: IoNamesBody) -> dict:
+    cfg = load_config()
+    ni = _normalize_io_rows(body.inputs)
+    no = _normalize_io_rows(body.outputs)
+    if ni is not None:
+        cfg["inputs"] = ni
+    if no is not None:
+        cfg["outputs"] = no
+    if ni is None and no is None:
+        raise HTTPException(status_code=400, detail="inputs 또는 outputs 중 하나 이상 필요")
+    save_config(cfg)
+    return {
+        "inputs": cfg.get("inputs") or [],
+        "outputs": cfg.get("outputs") or [],
+    }
+
+
+@app.put("/api/settings/io-names")
+def put_io_names(body: IoNamesBody) -> dict:
+    return _save_io_names(body)
+
+
+@app.post("/api/settings/io-names")
+def post_io_names(body: IoNamesBody) -> dict:
+    """PUT과 동일 — 일부 프록시·캐시 환경에서 POST만 허용될 때 사용."""
+    return _save_io_names(body)
+
+
 @app.get("/api/status")
 def api_status() -> dict:
     cfg = load_config()
@@ -146,13 +272,6 @@ def api_status() -> dict:
     if not st.get("outputs"):
         st = default_state()
     return _enrich_status(cfg, st)
-
-
-def _connection_probe_result(cfg: dict) -> dict:
-    proto = protocol_settings(cfg)
-    probe = proto["probe_command"]
-    drv = _driver_from_cfg(cfg)
-    return drv.test_link(probe)
 
 
 def _apply_probe_to_state(result: dict) -> None:
@@ -174,8 +293,22 @@ def post_connection_test() -> dict:
     """`probe_command`(기본 `.`)으로 Serial 응답 확인 — 성공/실패 시 state 반영."""
 
     cfg = load_config()
-    result = _connection_probe_result(cfg)
-    _apply_probe_to_state(result)
+    with SERIAL_LOCK:
+        result = matrix_probe(cfg)
+        _apply_probe_to_state(result)
+    msg = str(result.get("message") or "")
+    prepend_history(
+        cfg,
+        {
+            "id": new_action_id(),
+            "type": "connection_test",
+            "title": "연결 테스트 — " + ("성공" if result.get("ok") else "실패"),
+            "success": bool(result.get("ok")),
+            "undoable": False,
+            "created_at": utc_now_iso(),
+            "detail": msg[:300],
+        },
+    )
     if not result["ok"]:
         raise HTTPException(status_code=502, detail=result)
     return result
@@ -186,25 +319,325 @@ def get_connection_test() -> dict:
     """연결 확인만 수행(state 변경 없음)."""
 
     cfg = load_config()
-    return _connection_probe_result(cfg)
+    with SERIAL_LOCK:
+        return matrix_probe(cfg)
+
+
+@app.get("/api/history")
+def get_history() -> dict:
+    return {"items": load_history()}
+
+
+@app.get("/api/undo")
+def get_undo() -> dict:
+    return {"items": load_undo_stack()}
+
+
+@app.get("/api/presets")
+def get_presets() -> dict:
+    items = load_presets()
+    items_sorted = sorted(items, key=lambda x: (int(x.get("sort_order", 0)), str(x.get("id", ""))))
+    return {"items": items_sorted}
+
+
+@app.post("/api/presets")
+def post_preset(body: PresetCreate) -> dict:
+    cfg = load_config()
+    routes = [{"input_no": r.input_no, "output_no": r.output_no} for r in body.routes]
+    items = load_presets()
+    pid = new_preset_id()
+    so = body.sort_order if body.sort_order is not None else next_sort_order(items)
+    entry = {
+        "id": pid,
+        "name": body.name.strip(),
+        "description": (body.description or "").strip(),
+        "confirm_before_run": bool(body.confirm_before_run),
+        "routes": routes,
+        "sort_order": int(so),
+    }
+    items.append(entry)
+    save_presets(items)
+    return {"preset": entry}
+
+
+@app.put("/api/presets/{preset_id}")
+def put_preset(preset_id: str, body: PresetUpdate) -> dict:
+    items = load_presets()
+    p = preset_by_id(items, preset_id)
+    if p is None:
+        raise HTTPException(status_code=404, detail="프리셋 없음")
+    if body.name is not None:
+        p["name"] = body.name.strip()
+    if body.description is not None:
+        p["description"] = body.description.strip()
+    if body.confirm_before_run is not None:
+        p["confirm_before_run"] = body.confirm_before_run
+    if body.routes is not None:
+        p["routes"] = [{"input_no": r.input_no, "output_no": r.output_no} for r in body.routes]
+        if not p["routes"]:
+            raise HTTPException(status_code=400, detail="routes는 1개 이상")
+    if body.sort_order is not None:
+        p["sort_order"] = int(body.sort_order)
+    save_presets(items)
+    return {"preset": p}
+
+
+@app.delete("/api/presets/{preset_id}")
+def delete_preset(preset_id: str) -> dict:
+    items = load_presets()
+    new_items = [x for x in items if str(x.get("id")) != preset_id]
+    if len(new_items) == len(items):
+        raise HTTPException(status_code=404, detail="프리셋 없음")
+    save_presets(new_items)
+    return {"ok": True}
+
+
+@app.put("/api/presets/order")
+def put_preset_order(body: PresetOrderBody) -> dict:
+    items = load_presets()
+    by_id = {str(x.get("id")): x for x in items}
+    ordered: list[dict] = []
+    for pid in body.order:
+        if pid in by_id:
+            ordered.append(by_id[pid])
+    rest = [x for x in items if str(x.get("id")) not in body.order]
+    merged = ordered + rest
+    for i, x in enumerate(merged):
+        x["sort_order"] = i + 1
+    save_presets(merged)
+    return {"items": sorted(merged, key=lambda x: int(x.get("sort_order", 0)))}
+
+
+@app.post("/api/presets/{preset_id}/run")
+def post_preset_run(preset_id: str) -> dict:
+    cfg = load_config()
+    items = load_presets()
+    raw = preset_by_id(items, preset_id)
+    if raw is None:
+        raise HTTPException(status_code=404, detail="프리셋 없음")
+    routes = normalize_preset_routes(raw.get("routes"))
+    if not routes:
+        raise HTTPException(status_code=400, detail="유효한 routes 없음")
+
+    title = str(raw.get("name") or preset_id)
+    action_id = new_action_id()
+
+    with SERIAL_LOCK:
+        st = load_state()
+        if not st.get("outputs"):
+            st = default_state()
+
+        targets = _preset_output_targets(routes)
+        before_routes = [
+            {"output_no": o, "input_no": _current_input_for_output(st, o)}
+            for o in sorted(targets.keys())
+        ]
+        after_routes = [{"output_no": o, "input_no": targets[o]} for o in sorted(targets.keys())]
+
+        for idx, rt in enumerate(routes):
+            if idx:
+                time.sleep(0.15)
+            r = matrix_send_route(cfg, rt["input_no"], rt["output_no"])
+            if not r.ok:
+                save_state(st)
+                prepend_history(
+                    cfg,
+                    {
+                        "id": action_id,
+                        "type": "preset_run",
+                        "title": f"프리셋(중단): {title}",
+                        "success": False,
+                        "undoable": False,
+                        "created_at": utc_now_iso(),
+                        "detail": (r.message or "")[:300],
+                    },
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail={
+                        "ok": False,
+                        "command": r.command,
+                        "message": r.message,
+                        "raw": r.raw_text,
+                        "partial": True,
+                    },
+                )
+            _apply_route_send_to_state(st, r, rt["input_no"], rt["output_no"])
+        save_state(st)
+
+    prepend_history(
+        cfg,
+        {
+            "id": action_id,
+            "type": "preset_run",
+            "title": f"프리셋: {title}",
+            "success": True,
+            "undoable": True,
+            "created_at": utc_now_iso(),
+        },
+    )
+    prepend_undo(
+        cfg,
+        {
+            "action_id": action_id,
+            "title": f"프리셋: {title}",
+            "before_routes": before_routes,
+            "after_routes": after_routes,
+            "created_at": utc_now_iso(),
+        },
+    )
+
+    return {
+        "ok": True,
+        "action_id": action_id,
+        "state": _enrich_status(cfg, st),
+    }
+
+
+@app.post("/api/undo/{action_id}")
+def post_undo(action_id: str) -> dict:
+    """undo_stack의 before_routes로 복원(변경 Output만). input_no가 null이면 Serial 없이 state만 복원."""
+
+    entry = find_undo_entry(action_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="해당 되돌리기 항목이 없습니다.")
+
+    cfg = load_config()
+    before = entry.get("before_routes") or []
+    if not isinstance(before, list):
+        raise HTTPException(status_code=400, detail="before_routes 형식 오류")
+    if not before:
+        raise HTTPException(status_code=400, detail="before_routes가 비어 있습니다.")
+
+    st = load_state()
+    if not st.get("outputs"):
+        st = default_state()
+
+    last_raw_for_parse = ""
+
+    with SERIAL_LOCK:
+        for br in before:
+            if not isinstance(br, dict):
+                continue
+            try:
+                out_no = int(br["output_no"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            inn = br.get("input_no")
+            prev_in: int | None
+            if inn is None:
+                prev_in = None
+            else:
+                try:
+                    prev_in = int(inn)
+                except (TypeError, ValueError):
+                    continue
+
+            if prev_in is not None:
+                r = matrix_send_route(cfg, prev_in, out_no)
+                if not r.ok:
+                    raise HTTPException(
+                        status_code=502,
+                        detail={
+                            "ok": False,
+                            "message": r.message,
+                            "command": r.command,
+                            "raw": r.raw_text,
+                            "partial": True,
+                        },
+                    )
+                last_raw_for_parse = r.raw_text or ""
+
+            for row in st["outputs"]:
+                if int(row["output_no"]) == out_no:
+                    row["input_no"] = prev_in
+                    break
+
+        tbl_undo = parse_ch_v_routing_table(last_raw_for_parse)
+        if tbl_undo:
+            apply_routing_table_to_state(st, tbl_undo)
+            st["last_cleaned_preview"] = "Ch:V 라우팅 테이블 16채널 반영"
+        else:
+            st["last_cleaned_preview"] = None
+        if last_raw_for_parse:
+            st["last_raw_preview"] = last_raw_for_parse[:500]
+
+        st["connected"] = True
+        st["last_checked_at"] = utc_now_iso()
+        st["last_error"] = None
+        save_state(st)
+
+    remove_undo_by_action_id(action_id)
+
+    title = str(entry.get("title") or "작업")
+    redo_action_id = new_action_id()
+    prepend_history(
+        cfg,
+        {
+            "id": redo_action_id,
+            "type": "undo",
+            "title": f"되돌리기: {title}",
+            "success": True,
+            "undoable": True,
+            "created_at": utc_now_iso(),
+            "undid_action_id": action_id,
+        },
+    )
+    # 상호 undo: 되돌리기 직전 상태(after)로 다시 돌아갈 수 있도록 스택에 쌓음
+    prepend_undo(
+        cfg,
+        {
+            "action_id": redo_action_id,
+            "title": f"되돌리기 취소(재적용): {title}",
+            "before_routes": deepcopy(entry.get("after_routes") or []),
+            "after_routes": deepcopy(entry.get("before_routes") or []),
+            "created_at": utc_now_iso(),
+        },
+    )
+
+    return {"ok": True, "state": _enrich_status(cfg, st)}
 
 
 @app.post("/api/routing")
 def post_routing(body: RouteBody) -> dict:
-    """`{input}X{output}.` 형식으로 전송 — 성공 시 state.json 해당 출력만 갱신."""
+    """`{input}X{output}.` 형식으로 전송 — 성공 시 state.json 해당 출력만 갱신 + history·undo_stack."""
 
     cfg = load_config()
-    cmd = _format_route_command(cfg, body.input_no, body.output_no)
-    s = serial_settings(cfg)
-    drv = _driver_from_cfg(cfg)
-    read_to = max(3.0, float(s["timeout"]) * 2.0)
-    r = drv.send_command(
-        cmd,
-        read_timeout=read_to,
-        quiet_threshold=8,
-        tail_extend_sec=0.5,
-    )
+    title = _route_title(cfg, body.input_no, body.output_no)
+    action_id = new_action_id()
+
+    st0 = load_state()
+    if not st0.get("outputs"):
+        st0 = default_state()
+    before_input: int | None = None
+    for row in st0["outputs"]:
+        if int(row["output_no"]) == body.output_no:
+            v = row.get("input_no")
+            before_input = int(v) if v is not None else None
+            break
+
+    try:
+        format_route_command(cfg, body.input_no, body.output_no)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    with SERIAL_LOCK:
+        r = matrix_send_route(cfg, body.input_no, body.output_no)
+    cmd = r.command
+
     if not r.ok:
+        prepend_history(
+            cfg,
+            {
+                "id": action_id,
+                "type": "manual_route",
+                "title": title,
+                "success": False,
+                "undoable": False,
+                "created_at": utc_now_iso(),
+                "detail": (r.message or "")[:300],
+            },
+        )
         raise HTTPException(
             status_code=502,
             detail={
@@ -218,18 +651,34 @@ def post_routing(body: RouteBody) -> dict:
     st = load_state()
     if not st.get("outputs"):
         st = default_state()
-    for row in st["outputs"]:
-        if int(row["output_no"]) == body.output_no:
-            row["input_no"] = body.input_no
-            break
-    st["connected"] = True
-    st["last_checked_at"] = utc_now_iso()
-    st["last_error"] = None
-    st["last_raw_preview"] = (r.raw_text or "")[:500]
-    st["last_cleaned_preview"] = None
+    _apply_route_send_to_state(st, r, body.input_no, body.output_no)
     save_state(st)
+
+    prepend_history(
+        cfg,
+        {
+            "id": action_id,
+            "type": "manual_route",
+            "title": title,
+            "success": True,
+            "undoable": True,
+            "created_at": utc_now_iso(),
+        },
+    )
+    prepend_undo(
+        cfg,
+        {
+            "action_id": action_id,
+            "title": title,
+            "before_routes": [{"output_no": body.output_no, "input_no": before_input}],
+            "after_routes": [{"output_no": body.output_no, "input_no": body.input_no}],
+            "created_at": utc_now_iso(),
+        },
+    )
+
     return {
         "ok": True,
+        "action_id": action_id,
         "command": cmd,
         "message": r.message,
         "raw": r.raw_text,

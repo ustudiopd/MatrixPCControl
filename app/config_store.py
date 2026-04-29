@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from app.paths import DATA_DIR
+from app.state_store import atomic_write_json
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "server": {
@@ -26,6 +27,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "probe_command": ".",
         },
     },
+    "history": {"max_items": 50},
+    "undo": {"max_items": 20},
+    "inputs": [],
+    "outputs": [],
 }
 
 
@@ -50,8 +55,7 @@ def load_config() -> dict[str, Any]:
 
 def save_config(cfg: dict[str, Any]) -> None:
     ensure_data_dir()
-    path = config_path()
-    path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_json(config_path(), cfg)
 
 
 def serial_settings(cfg: dict[str, Any]) -> dict[str, Any]:
