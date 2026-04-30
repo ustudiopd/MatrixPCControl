@@ -3,6 +3,7 @@ from __future__ import annotations
 import secrets
 import time
 import webbrowser
+from contextlib import asynccontextmanager
 from copy import deepcopy
 from datetime import datetime
 from threading import Timer
@@ -12,7 +13,14 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
-from app.config_store import io_name_maps, load_config, protocol_settings, save_config, serial_settings
+from app.config_store import (
+    io_name_maps,
+    load_config,
+    presets_settings,
+    protocol_settings,
+    save_config,
+    serial_settings,
+)
 from app.driver import SendResult
 from app.history_store import load_history, prepend_history
 from app.matrix_service import format_route_command, matrix_probe, matrix_send_route
@@ -24,14 +32,29 @@ from app.presets_store import (
     save_presets,
 )
 from app.routing_parse import apply_routing_table_to_state, parse_ch_v_routing_table
-from app.paths import ROOT
+from app.log_setup import get_logger
+from app.paths import DATA_DIR, STATIC_DIR
 from app.serial_queue import SERIAL_LOCK
 from app.state_store import default_state, load_state, save_state, utc_now_iso
 from app.undo_store import find_undo_entry, load_undo_stack, prepend_undo, remove_undo_by_action_id
 
-app = FastAPI(title="A1616HD Matrix Control")
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    from app.log_setup import setup_logging_once
 
-static_dir = ROOT / "static"
+    setup_logging_once()
+    get_logger().info(
+        "FastAPI 시작 — 데이터: %s, 정적 번들: %s",
+        str(DATA_DIR.resolve()),
+        str(STATIC_DIR.resolve()),
+    )
+    yield
+    get_logger().info("FastAPI 종료")
+
+
+app = FastAPI(title="A1616HD Matrix Control", lifespan=_lifespan)
+
+static_dir = STATIC_DIR
 static_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
@@ -64,7 +87,7 @@ class RouteBody(BaseModel):
 
 class IoNameRow(BaseModel):
     no: int = Field(ge=1, le=16)
-    name: str = ""
+    name: str = Field(default="", max_length=120)
 
 
 class IoNamesBody(BaseModel):
@@ -97,6 +120,12 @@ class PresetOrderBody(BaseModel):
     order: list[str] = Field(min_length=1)
 
 
+class PresetTimingBody(BaseModel):
+    """프리셋 순차 라우팅 간 지연 — 명세 4.7~4.8 (대략 0.10~0.20초)."""
+
+    route_between_sec: float = Field(ge=0.08, le=0.35)
+
+
 def new_action_id() -> str:
     return f"action_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(2)}"
 
@@ -109,8 +138,8 @@ def _route_title(cfg: dict, input_no: int, output_no: int) -> str:
     inp_m, out_m = io_name_maps(cfg)
     iname = (inp_m.get(input_no) or "").strip()
     oname = (out_m.get(output_no) or "").strip()
-    left = f"Input {input_no}" + (f" ({iname})" if iname else "")
-    right = f"Output {output_no}" + (f" ({oname})" if oname else "")
+    left = str(input_no) + (f" · {iname}" if iname else "")
+    right = str(output_no) + (f" · {oname}" if oname else "")
     return f"{left} → {right}"
 
 
@@ -143,18 +172,28 @@ def _enrich_status(cfg: dict, state: dict) -> dict:
         on = int(o["output_no"])
         inn = o.get("input_no")
         oname = out_m.get(on, "").strip()
-        iname = inp_m.get(int(inn), "").strip() if inn is not None else ""
-        out_disp = f"Output {on}" + (f" / {oname}" if oname else "")
         if inn is None:
-            in_disp = "— (미수신)"
+            in_key = None
+            iname = ""
         else:
-            in_disp = f"Input {inn}" + (f" / {iname}" if iname else "")
+            try:
+                in_key = int(inn)
+            except (TypeError, ValueError):
+                in_key = None
+            iname = inp_m.get(in_key, "").strip() if in_key is not None else ""
+        out_disp = str(on) + (f" · {oname}" if oname else "")
+        if inn is None:
+            in_disp = "—"
+        else:
+            in_disp = str(inn) + (f" · {iname}" if iname else "")
         rows.append(
             {
                 "output_no": on,
                 "input_no": inn,
                 "output_display": out_disp,
                 "input_display": in_disp,
+                "input_alias": iname,
+                "output_alias": oname,
             }
         )
     return {
@@ -211,9 +250,20 @@ def get_settings() -> dict:
     return {
         "serial": serial_settings(cfg),
         "protocol": protocol_settings(cfg),
+        "presets": presets_settings(cfg),
         "inputs": cfg.get("inputs") or [],
         "outputs": cfg.get("outputs") or [],
     }
+
+
+@app.put("/api/settings/presets-timing")
+def put_presets_timing(body: PresetTimingBody) -> dict:
+    """프리셋 실행 시 라우트 사이 `time.sleep` 값 — `config.json` `presets.route_between_sec`에 저장."""
+
+    cfg = load_config()
+    cfg.setdefault("presets", {})["route_between_sec"] = float(body.route_between_sec)
+    save_config(cfg)
+    return {"presets": presets_settings(cfg)}
 
 
 @app.put("/api/settings/serial")
@@ -274,6 +324,22 @@ def api_status() -> dict:
     return _enrich_status(cfg, st)
 
 
+@app.get("/api/connection")
+def api_connection() -> dict:
+    """연결 상태·마지막 오류 요약(GET) — 명세 §7.`/api/connection` — probe 없이 state 반영값."""
+
+    cfg = load_config()
+    st = load_state()
+    if not st.get("outputs"):
+        st = default_state()
+    return {
+        "connected": bool(st.get("connected")),
+        "last_checked_at": st.get("last_checked_at"),
+        "last_error": st.get("last_error"),
+        "serial": serial_settings(cfg),
+    }
+
+
 def _apply_probe_to_state(result: dict) -> None:
     st = load_state()
     if not st.get("outputs"):
@@ -297,6 +363,7 @@ def post_connection_test() -> dict:
         result = matrix_probe(cfg)
         _apply_probe_to_state(result)
     msg = str(result.get("message") or "")
+    get_logger().info("연결 테스트 결과 ok=%s", bool(result.get("ok")))
     prepend_history(
         cfg,
         {
@@ -340,9 +407,16 @@ def get_presets() -> dict:
     return {"items": items_sorted}
 
 
+@app.get("/api/presets/{preset_id}")
+def get_preset(preset_id: str) -> dict:
+    raw = preset_by_id(load_presets(), preset_id)
+    if raw is None:
+        raise HTTPException(status_code=404, detail="프리셋 없음")
+    return {"preset": raw}
+
+
 @app.post("/api/presets")
 def post_preset(body: PresetCreate) -> dict:
-    cfg = load_config()
     routes = [{"input_no": r.input_no, "output_no": r.output_no} for r in body.routes]
     items = load_presets()
     pid = new_preset_id()
@@ -421,6 +495,12 @@ def post_preset_run(preset_id: str) -> dict:
 
     title = str(raw.get("name") or preset_id)
     action_id = new_action_id()
+    get_logger().info(
+        "프리셋 Serial 실행 시작: preset_id=%s title=%s routes=%d",
+        preset_id,
+        title,
+        len(routes),
+    )
 
     with SERIAL_LOCK:
         st = load_state()
@@ -434,12 +514,19 @@ def post_preset_run(preset_id: str) -> dict:
         ]
         after_routes = [{"output_no": o, "input_no": targets[o]} for o in sorted(targets.keys())]
 
+        gap = presets_settings(cfg)["route_between_sec"]
         for idx, rt in enumerate(routes):
             if idx:
-                time.sleep(0.15)
+                time.sleep(gap)
             r = matrix_send_route(cfg, rt["input_no"], rt["output_no"])
             if not r.ok:
                 save_state(st)
+                get_logger().warning(
+                    "프리셋 중단: preset_id=%s 명령=%s msg=%s",
+                    preset_id,
+                    r.command,
+                    r.message,
+                )
                 prepend_history(
                     cfg,
                     {
@@ -503,6 +590,7 @@ def post_undo(action_id: str) -> dict:
         raise HTTPException(status_code=404, detail="해당 되돌리기 항목이 없습니다.")
 
     cfg = load_config()
+    get_logger().info("되돌리기 시작 action_id=%s", action_id)
     before = entry.get("before_routes") or []
     if not isinstance(before, list):
         raise HTTPException(status_code=400, detail="before_routes 형식 오류")
@@ -605,6 +693,11 @@ def post_routing(body: RouteBody) -> dict:
     cfg = load_config()
     title = _route_title(cfg, body.input_no, body.output_no)
     action_id = new_action_id()
+    get_logger().info(
+        "수동 라우팅 Serial: input_no=%s output_no=%s",
+        body.input_no,
+        body.output_no,
+    )
 
     st0 = load_state()
     if not st0.get("outputs"):

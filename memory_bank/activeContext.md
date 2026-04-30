@@ -11,7 +11,9 @@
 
 ## 다음 단계 (명세 §12)
 
-- **2단계(일부 완료):** 수동 라우팅 + **`data/history.json`**(최대 50) + **`data/undo_stack.json`**(최대 20) + `GET /api/history`, `GET /api/undo`, `POST /api/undo/{action_id}` + UI(최근 작업·되돌리기). 연결 테스트 성공/실패도 history에 기록.
-- **남음(명세 순):** SerialCommandQueue/MatrixService 계층, 프리셋, 이름 UI, undo 상호 undo 등.
+- **3단계(완료): 이름 관리** — `config.json`의 `inputs`/`outputs`(`no`, `name`), `GET /api/settings`·`PUT|POST /api/settings/io-names`, UI 표 16+16 저장, `/api/status` 응답에 `output_display`/`input_display`로 이름 반영; 수동 라우팅에 선택 채널 이름 미리보기.
+- **4단계(완료): 프리셋 전부** — CRUD·순서·실행, 라우트 사이 **`presets.route_between_sec`** 저장(명세 100–200ms, `PUT /api/settings/presets-timing`), 성공 시 history·undo·중단 시 기록. `GET /api/presets/{id}` 단건. **§7:** `GET /api/connection` (state 요약).
+- **2·5단계 등:** 수동 라우팅·history·undo UI는 이미 병행 구현됨.
+- **6단계(완료): 안정화** — `data/logs/app.log` **10MB·5파일 회전**, 주요 API에 파일 로그, Serial은 기존처럼 `with`로 포트 닫힘; UI **재진입 플래그**(`__matrixControlInflight`); JSON은 기존 `atomic_write_json`; 배포: `A1616HD-Control.spec` / `dist/A1616HD-Control.exe`, `entry.py`, EXE 옆 `data/`; 장비 없이 `device.transport: "mock"` 또는 `MATRIXPC_MOCK_TRANSPORT=1`.
 
 구현 시 세부는 항상 **`SPEC_A1616HD.md`**와 대조한다.

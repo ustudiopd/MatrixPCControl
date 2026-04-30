@@ -13,6 +13,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "auto_open_browser": True,
     },
     "device": {
+        "transport": "serial",
         "serial": {
             "port": "COM3",
             "baudrate": 9600,
@@ -29,6 +30,10 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "history": {"max_items": 50},
     "undo": {"max_items": 20},
+    # 프리셋 실행 시 라우트 사이 지연 — 명세 4.7~4.8 (대략 100~200ms 권장)
+    "presets": {
+        "route_between_sec": 0.15,
+    },
     "inputs": [],
     "outputs": [],
 }
@@ -79,6 +84,17 @@ def protocol_settings(cfg: dict[str, Any]) -> dict[str, str]:
         "route_template": str(p.get("route_template") or d.get("route_template", "{input}X{output}.")),
         "probe_command": str(p.get("probe_command") or d.get("probe_command", ".")),
     }
+
+
+def presets_settings(cfg: dict[str, Any]) -> dict[str, Any]:
+    """프리셋 실행 옵션(저장 형식 호환용 기본 포함)."""
+
+    p = cfg.get("presets") or {}
+    default = DEFAULT_CONFIG["presets"]
+    raw = float(p.get("route_between_sec", default["route_between_sec"]))
+    # 명세 권장 100~200ms 근처; 장비 차에 따라 약간 여유 둠
+    route_between_sec = max(0.08, min(0.35, raw))
+    return {"route_between_sec": route_between_sec}
 
 
 def io_name_maps(cfg: dict[str, Any]) -> tuple[dict[int, str], dict[int, str]]:

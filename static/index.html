@@ -50,151 +50,967 @@
     .io-grid { flex: 1; min-width: 14rem; max-width: 22rem; }
     .io-grid table { font-size: 0.8rem; }
     .io-grid input[type="text"] { max-width: 100%; padding: 0.25rem 0.4rem; }
-    .preset-card {
-      margin-top: 0.75rem; padding: 0.75rem; border-radius: 8px;
-      background: #161b22; border: 1px solid #30363d;
+    .preset-panel-section {
+      padding: 0.95rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #30363d;
+      background: #161b22;
+      margin-bottom: 1.1rem;
     }
-    .preset-card button { margin-top: 0.35rem; margin-right: 0.35rem; }
-    textarea#presetNewRoutes { width: 100%; max-width: 28rem; min-height: 4rem; font: inherit; }
+    .preset-panel-section:last-child {
+      margin-bottom: 0;
+    }
+    .preset-panel-section-title {
+      margin: 0 0 0.35rem 0;
+      font-size: 0.97rem;
+      font-weight: 600;
+      color: #e6edf3;
+    }
+    /* 위: 실행·순서 / 아래: 등록 폼 만 — 시각적으로 구역 분리 */
+    .preset-panel-section--apply {
+      border-left: 3px solid #238636;
+    }
+    .preset-panel-section--new {
+      border-left: 3px solid #1f6feb;
+    }
+    #presetList {
+      margin-top: 0.4rem;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      background: #0d1117;
+      max-height: min(52vh, 29rem);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    .preset-card {
+      margin: 0;
+      padding: 0.72rem 0.85rem;
+      border-radius: 0;
+      border: none;
+      border-bottom: 1px solid #21262d;
+      background: transparent;
+      box-sizing: border-box;
+    }
+    .preset-card:last-child {
+      border-bottom: none;
+    }
+    .preset-list-row-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.35rem 0.65rem;
+      line-height: 1.35;
+    }
+    .preset-list-ord {
+      font-size: 0.78rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #6e7681;
+      flex: 0 0 auto;
+      min-width: 1.4rem;
+    }
+    .preset-list-title-inline {
+      flex: 1 1 10rem;
+      min-width: 0;
+      font-size: 0.875rem;
+    }
+    .preset-list-title-inline .meta {
+      margin-top: 0;
+      display: inline;
+    }
+    .preset-card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem;
+      row-gap: 0.4rem;
+      margin-top: 0.42rem;
+    }
+    .preset-card-actions button {
+      margin: 0 !important;
+      margin-right: 0 !important;
+    }
+    .preset-card .preset-edit-toggle {
+      margin-top: 0 !important;
+    }
+    .preset-edit-panel {
+      margin-top: 0.65rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid #21262d;
+    }
+    .preset-card .preset-card-routes {
+      margin: 0.35rem 0 0;
+    }
+    .preset-card-routes {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem 0.45rem;
+      line-height: 1.45;
+      font-size: 0.78rem;
+      color: #8b949e;
+    }
+    .preset-route-chip {
+      display: inline-block;
+      padding: 0.14rem 0.48rem;
+      border-radius: 5px;
+      background: #21262d;
+      border: 1px solid #30363d;
+      font-size: 0.78rem;
+      font-variant-numeric: tabular-nums;
+      color: #c9d1d9;
+    }
+    .preset-route-chip b {
+      color: #79c0ff;
+      font-weight: 600;
+    }
+    .preset-route-chip span.preset-route-arr {
+      color: #8b949e;
+      font-weight: 500;
+      margin: 0 0.1rem;
+    }
+    .preset-route-chip b.preset-route-out-num {
+      color: #f0f6fc;
+      font-weight: 600;
+    }
+    .preset-card-routes--empty {
+      color: #6e7681;
+      font-size: 0.78rem;
+    }
+    /* 프리셋 편집/추가 — 라우팅 칩 영역 */
+    .preset-routes-editor-visual:not(.preset-card-routes--empty) {
+      padding: 0.45rem 0.55rem;
+      margin-top: 0.25rem;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      background: #161b22;
+    }
+    .preset-route-editor-chip-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.22rem;
+      margin: 0 0.35rem 0.35rem 0;
+      vertical-align: middle;
+    }
+    button.preset-route-chip-remove {
+      margin: 0 !important;
+      padding: 0.1rem 0.32rem !important;
+      font-size: 0.72rem !important;
+      line-height: 1.15 !important;
+      font-weight: 600;
+      min-height: auto !important;
+    }
+    .preset-new-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      align-items: flex-end;
+      margin-top: 0.35rem;
+    }
+    .preset-new-meta-field {
+      flex: 1 1 11rem;
+      min-width: 0;
+      max-width: 22rem;
+    }
+    .preset-new-meta-field label {
+      margin-top: 0;
+    }
+    .preset-new-meta-field input {
+      max-width: 100%;
+      width: 100%;
+    }
+    /* 동기 전용 라우팅 텍스트(칩 미러링) — 화면에 보이지 않음 */
+    /* 설정 패널 모달 (<dialog>) */
+    dialog.panel-dialog {
+      padding: 0;
+      margin: auto;
+      max-width: min(94vw, 52rem);
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+    }
+    dialog.panel-dialog::backdrop {
+      background: rgba(1, 4, 9, 0.72);
+    }
+    .panel-dialog-surface {
+      display: flex;
+      flex-direction: column;
+      max-height: min(90vh, 48rem);
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+    }
+    .panel-dialog-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 0.85rem 1rem;
+      background: #21262d;
+      border-bottom: 1px solid #30363d;
+    }
+    .panel-dialog-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e6edf3;
+    }
+    .panel-dialog-head .fold-summary-mark {
+      display: block;
+      margin-top: 0.2rem !important;
+    }
+    .panel-dialog-close,
+    .panel-dialog-actions button {
+      margin-top: 0 !important;
+      flex-shrink: 0;
+      padding: 0.42rem 1rem;
+      font-size: 0.875rem;
+      line-height: 1.2;
+      font-weight: 500;
+      box-sizing: border-box;
+      min-height: 2.35rem;
+    }
+    .panel-dialog-actions {
+      display: flex;
+      align-items: stretch;
+      gap: 0.45rem;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .panel-dialog-actions button {
+      margin-right: 0 !important;
+    }
+    dialog.panel-dialog .fold-body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: 1rem 1rem 0.75rem;
+      border: none;
+      border-radius: 0;
+      background: #0d1117;
+      margin-bottom: 0;
+    }
+    .fold-summary-mark {
+      font-size: 0.8rem;
+      color: #8b949e;
+      font-weight: normal;
+    }
+    /* 메인 라우팅: 3열×2행 그리드 — 레이블 행과 입력·버튼 행 정렬 통일 */
+    .route-main-row {
+      display: grid;
+      grid-template-columns: repeat(3, auto);
+      column-gap: 0.45rem;
+      row-gap: 0.3rem;
+      justify-content: start;
+      justify-items: start;
+      margin-top: 0.5rem;
+      width: 100%;
+    }
+    .route-main-row > label {
+      margin-top: 0;
+    }
+    .route-main-row .route-main-colhead {
+      min-height: calc(0.85rem * 1.2);
+      box-sizing: border-box;
+    }
+    .route-main-row input[type="number"],
+    .route-main-row #routeSend {
+      box-sizing: border-box;
+      line-height: 1.25;
+    }
+    .route-main-row input[type="number"] {
+      margin: 0;
+      max-width: 5.5rem;
+      width: 100%;
+    }
+    .route-main-row #routeSend {
+      margin: 0 !important;
+      padding: 0.45rem 0.75rem;
+      border: 1px solid #238636;
+    }
+    /* 메인 라우팅 입력 방식 토글 */
+    .route-mode-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+      margin-top: 0.35rem;
+      margin-bottom: 0.5rem;
+    }
+    .route-mode-toggle {
+      display: inline-flex;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #161b22;
+    }
+    .route-mode-btn {
+      margin: 0 !important;
+      padding: 0.4rem 1rem !important;
+      font-size: 0.82rem !important;
+      border: none !important;
+      border-radius: 0 !important;
+      background: #21262d;
+      color: #e6edf3;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .route-mode-btn + .route-mode-btn {
+      border-left: 1px solid #30363d !important;
+    }
+    .route-mode-btn.is-active {
+      background: #238636;
+      color: #fff;
+    }
+    .route-panel-vis[hidden] {
+      display: none !important;
+    }
+    .route-pad-send-row {
+      margin-top: 0.65rem;
+    }
+    .route-pad-send-row button[data-serial-busy] {
+      margin-top: 0 !important;
+      padding: 0.45rem 0.75rem;
+      border: 1px solid #238636;
+      box-sizing: border-box;
+      line-height: 1.25;
+    }
+    .panel-shortcuts {
+      display: flex; flex-wrap: wrap; gap: 0.4rem;
+      align-items: center;
+      padding: 0.65rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid #30363d;
+      background: #161b22;
+      margin-bottom: 1rem;
+    }
+    .panel-shortcuts .meta { margin: 0; margin-right: 0.35rem; }
+    .panel-shortcuts button.secondary { margin-top: 0; margin-bottom: 0; padding: 0.4rem 0.85rem; font-size: 0.82rem; }
+    h2.primary-first { margin-top: 0.25rem; }
+    /* 메인 라우팅 패드 (1–16 클릭 → routeIn/routeOut과 동기화) */
+    .route-pad-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.85rem 1.25rem;
+      margin-top: 0.55rem;
+      align-items: flex-start;
+    }
+    .route-pad-column {
+      flex: 1 1 12rem;
+      min-width: 0;
+      max-width: 22rem;
+    }
+    .route-pad-label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-size: 0.8rem;
+    }
+    .route-pad-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.35rem;
+    }
+    .route-pad-buttons button {
+      margin: 0 !important;
+      margin-right: 0 !important;
+      padding: 0.4rem 0.2rem;
+      font-size: 0.82rem;
+      min-height: 2.1rem;
+      box-sizing: border-box;
+    }
+    .route-pad-buttons button.route-pad-in.is-selected,
+    .route-pad-buttons button.route-pad-out.is-selected,
+    .route-pad-buttons button.preset-form-in.is-selected,
+    .route-pad-buttons button.preset-form-out.is-selected,
+    .route-pad-buttons button.preset-edit-in.is-selected,
+    .route-pad-buttons button.preset-edit-out.is-selected {
+      background: #1f6feb;
+      border-color: #388bfd;
+      color: #fff;
+    }
+    .preset-form-pads,
+    .preset-card-pads {
+      margin-top: 0.45rem;
+    }
+    .preset-card .preset-edit-add-pair,
+    #presetNewAddPair {
+      margin-top: 0.5rem !important;
+      margin-bottom: 0.35rem !important;
+    }
+    /* 라우팅 상태 4×4 — 셀 내부: 입력(왼쪽) ↔ 출력(오른쪽) */
+    #routeGrid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.45rem;
+      margin-top: 0.35rem;
+      width: 100%;
+      max-width: 100%;
+    }
+    .route-cell {
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      background: #161b22;
+      padding: 0.38rem 0.45rem;
+      font-size: 0.72rem;
+      line-height: 1.25;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      justify-content: center;
+      gap: 0.12rem;
+    }
+    .route-cell-line {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      word-break: break-word;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .route-cell-line.route-in {
+      color: #79c0ff;
+      flex: 1 1 50%;
+      text-align: center;
+      padding-right: 0.12rem;
+      border-right: 1px solid #30363d;
+    }
+    .route-cell-line.route-out {
+      color: #e6edf3;
+      flex: 1 1 50%;
+      text-align: center;
+      font-weight: 500;
+      padding-left: 0.12rem;
+    }
+    .route-num {
+      font-size: 1.38rem;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      flex-shrink: 0;
+    }
+    .route-cell-line.route-out .route-num { color: #f0f6fc; }
+    .route-tail {
+      font-size: 0.68rem;
+      line-height: 1.35;
+      font-weight: 400;
+      opacity: 0.92;
+      max-width: 100%;
+      white-space: normal;
+      word-break: break-word;
+      display: inline-block;
+    }
+    .route-tail.route-tail--placeholder {
+      visibility: hidden;
+      user-select: none;
+      pointer-events: none;
+    }
+    .route-wrap.route-wrap--stack {
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.2rem;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+    }
+    .route-chip-line--num {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .route-chip-line--alias {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      align-self: stretch;
+      min-height: calc(0.68rem * 1.35);
+    }
+    @media (max-width: 36rem) {
+      #routeGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
   </style>
 </head>
 <body>
   <h1>A1616HD 매트릭스</h1>
+  <nav class="panel-shortcuts" aria-label="설정 패널 열기">
+    <span class="meta">빠른 열기</span>
+    <button type="button" class="secondary" data-open-panel="dlgSerial">Serial 설정</button>
+    <button type="button" class="secondary" data-open-panel="dlgIoNames">I/O 이름</button>
+    <button type="button" class="secondary" data-open-panel="dlgPresets">프리셋</button>
+    <button type="button" class="secondary" data-open-panel="dlgHistory">최근 작업</button>
+  </nav>
 
-  <h2>Serial 설정</h2>
-  <p class="meta">
-    <strong>연결 테스트</strong>는 <code>probe_command</code>(기본 <code>.</code>) 한 번 보내고 응답으로 Serial 연결을 확인합니다.
-    라우팅은 <code>{input}X{output}.</code> 형식입니다.
-  </p>
-
-  <label>COM 포트</label>
-  <input id="port" type="text" placeholder="COM3" autocomplete="off" />
-
-  <div class="row">
-    <div>
-      <label>Baudrate</label>
-      <input id="baud" type="number" min="300" step="1" />
-    </div>
-    <div>
-      <label>Data bits</label>
-      <input id="bytesize" type="number" min="7" max="8" />
-    </div>
-    <div>
-      <label>Parity (N/E/O)</label>
-      <input id="parity" type="text" maxlength="1" />
-    </div>
-    <div>
-      <label>Stop bits</label>
-      <input id="stopbits" type="number" min="1" max="2" />
-    </div>
-    <div>
-      <label>Timeout (초)</label>
-      <input id="timeout" type="number" min="0.1" step="0.1" />
+  <h2 class="primary-first">메인 라우팅</h2>
+  <div class="route-mode-row">
+    <span class="meta route-mode-label">입력 방식</span>
+    <div class="route-mode-toggle" role="radiogroup" aria-label="라우팅 입력 방식">
+      <button type="button" class="route-mode-btn" id="routeModeNums" aria-pressed="false">숫자 입력</button>
+      <button type="button" class="route-mode-btn is-active" id="routeModePads" aria-pressed="true">패드</button>
     </div>
   </div>
 
-  <button id="save" type="button" class="secondary" data-serial-busy>설정 저장</button>
-  <button id="connTest" type="button" data-serial-busy>연결 테스트</button>
-
-  <div id="status" class="meta"></div>
-  <div id="out" class="out" aria-live="polite"></div>
-
-  <h2>수동 라우팅</h2>
-  <p class="meta">
-    장비에서 확인된 형식: <code id="routeTemplate">—</code> (플레이스홀더 <code>input</code>, <code>output</code>)
-  </p>
-  <div class="row">
-    <div>
-      <label>Input (1–16)</label>
+  <div id="routePanelNums" class="route-panel-vis" hidden>
+    <div class="route-main-row">
+      <label for="routeIn">Input (1–16)</label>
+      <label for="routeOut">Output (1–16)</label>
+      <span class="route-main-colhead" aria-hidden="true"></span>
       <input id="routeIn" type="number" min="1" max="16" step="1" value="1" />
-    </div>
-    <div>
-      <label>Output (1–16)</label>
       <input id="routeOut" type="number" min="1" max="16" step="1" value="1" />
+      <button id="routeSend" type="button" data-serial-busy>연결</button>
     </div>
   </div>
-  <button id="routeSend" type="button" data-serial-busy>전송 (Serial)</button>
-  <p class="meta" style="margin-top:1rem;">테스트</p>
-  <button id="preset12" type="button" class="secondary" data-serial-busy>1→2 <code>(1X2.)</code></button>
-  <button id="preset22" type="button" class="secondary" data-serial-busy>2→2 <code>(2X2.)</code></button>
+
+  <div id="routePanelPads" class="route-panel-vis">
+    <div class="route-pad-wrap">
+      <div class="route-pad-column">
+        <span class="route-pad-label meta">Input 1–16</span>
+        <div id="routePadIn" class="route-pad-buttons" role="group" aria-label="Input 채널 선택"></div>
+      </div>
+      <div class="route-pad-column">
+        <span class="route-pad-label meta">Output 1–16</span>
+        <div id="routePadOut" class="route-pad-buttons" role="group" aria-label="Output 채널 선택"></div>
+      </div>
+    </div>
+    <div class="route-pad-send-row">
+      <button id="routeSendPad" type="button" data-serial-busy>연결</button>
+    </div>
+  </div>
+
   <div id="routeSendMsg" class="meta"></div>
 
-  <h2>라우팅 상태 (Output → Input)</h2>
-  <p class="meta">수동 라우팅 성공 시 장비 응답에 <code>Ch:0,V:01</code> 형태(16줄)가 있으면 <strong>전체 출력</strong>을 그 값으로 갱신합니다. 없으면 방금 보낸 출력 한 칸만 반영합니다.</p>
+  <h2>라우팅 상태</h2>
   <p class="meta" id="routeMeta">마지막 조회: —</p>
 
-  <table id="routeTable" aria-label="라우팅 조회">
-    <thead>
-      <tr><th>출력</th><th>연결된 입력</th></tr>
-    </thead>
-    <tbody id="routeBody"></tbody>
-  </table>
+  <div id="routeGrid" role="region" aria-label="라우팅 조회 4행 4열"></div>
   <div id="routeErr" class="meta"></div>
-  <details style="margin-top:1rem;">
-    <summary class="meta" style="cursor:pointer;">마지막 조회 raw 일부</summary>
-    <div id="rawPreview" class="out" style="max-height:8rem;"></div>
-  </details>
 
-  <h2>Input / Output 이름</h2>
-  <p class="meta">라우팅 표에 표시되는 이름입니다. <code>data/config.json</code>에 저장됩니다.</p>
-  <div class="row" style="align-items: flex-start;">
-    <div class="io-grid">
-      <h3 class="meta" style="margin:0 0 0.5rem 0;">Input 1–16</h3>
-      <table aria-label="입력 이름">
-        <thead><tr><th>#</th><th>이름</th></tr></thead>
-        <tbody id="ioInBody"></tbody>
-      </table>
-    </div>
-    <div class="io-grid">
-      <h3 class="meta" style="margin:0 0 0.5rem 0;">Output 1–16</h3>
-      <table aria-label="출력 이름">
-        <thead><tr><th>#</th><th>이름</th></tr></thead>
-        <tbody id="ioOutBody"></tbody>
-      </table>
-    </div>
-  </div>
-  <button id="saveIoNames" type="button" class="secondary">I/O 이름 저장</button>
-  <div id="ioNameMsg" class="meta"></div>
-
-  <h2>프리셋</h2>
-  <p class="meta">
-    <code>data/presets.json</code> — 실행 시 Serial은 한 번에 순차 전송됩니다. 되돌리기 스택에도 쌓입니다.
-  </p>
-  <div id="presetList"></div>
-  <div style="margin-top:1.5rem;">
-    <h3 class="meta" style="margin:0 0 0.5rem 0;">새 프리셋</h3>
-    <label>이름</label>
-    <input id="presetNewName" type="text" placeholder="예: 발표 모드" maxlength="200" />
-    <label>설명 (선택)</label>
-    <input id="presetNewDesc" type="text" placeholder="짧은 설명" />
-    <label class="meta" style="display:flex;align-items:center;gap:0.5rem;margin-top:0.75rem;">
-      <input id="presetNewConfirm" type="checkbox" /> 실행 전 확인창
-    </label>
-    <label>라우팅 (한 줄에 <code>input,output</code> — 예: <code>1,1</code> 다음 줄 <code>2,2</code>)</label>
-    <textarea id="presetNewRoutes" placeholder="1,1&#10;2,2"></textarea>
-    <button id="addPreset" type="button" data-serial-busy>프리셋 추가</button>
-    <span id="presetFormMsg" class="meta"></span>
-  </div>
-
-  <h2>최근 작업</h2>
-  <p class="meta">연결 테스트·수동 라우팅·프리셋·되돌리기 기록 (최대 50건, <code>data/history.json</code>).</p>
-  <div id="historyList" aria-live="polite"></div>
-
-  <h2>되돌리기</h2>
-  <p class="meta">
-    성공한 수동 라우팅·프리셋·되돌리기 작업이 스택에 쌓입니다 (최대 20건, <code>data/undo_stack.json</code>).
-    되돌리기 후에는 <strong>되돌리기 취소(재적용)</strong>용 항목이 이어서 쌓여, 다시 직전 라우팅으로 돌릴 수 있습니다.
-    이전 입력이 없으면 Serial 없이 표시만 복원합니다.
-  </p>
+  <h2 style="margin-top:1.75rem">되돌리기</h2>
   <div id="undoList"></div>
   <div id="undoMsg" class="meta"></div>
 
+  <dialog id="dlgSerial" class="panel-dialog" aria-labelledby="dlgSerial-title">
+    <div class="panel-dialog-surface">
+      <header class="panel-dialog-head">
+        <div>
+          <h2 class="panel-dialog-title" id="dlgSerial-title">Serial 설정 · 연결 테스트</h2>
+          <span class="fold-summary-mark">COM 포트 저장 및 probe</span>
+        </div>
+        <button type="button" class="secondary panel-dialog-close">닫기</button>
+      </header>
+      <div class="fold-body">
+        <p class="meta" style="margin-top:0">
+          <strong>연결 테스트</strong>는 <code>probe_command</code>(기본 <code>.</code>) 한 번 보내고 응답으로 Serial 연결을 확인합니다.
+        </p>
+
+        <label>COM 포트</label>
+        <input id="port" type="text" placeholder="COM3" autocomplete="off" />
+
+        <div class="row">
+          <div>
+            <label>Baudrate</label>
+            <input id="baud" type="number" min="300" step="1" />
+          </div>
+          <div>
+            <label>Data bits</label>
+            <input id="bytesize" type="number" min="7" max="8" />
+          </div>
+          <div>
+            <label>Parity (N/E/O)</label>
+            <input id="parity" type="text" maxlength="1" />
+          </div>
+          <div>
+            <label>Stop bits</label>
+            <input id="stopbits" type="number" min="1" max="2" />
+          </div>
+          <div>
+            <label>Timeout (초)</label>
+            <input id="timeout" type="number" min="0.1" step="0.1" />
+          </div>
+        </div>
+
+        <button id="save" type="button" class="secondary" data-serial-busy>설정 저장</button>
+        <button id="connTest" type="button" data-serial-busy>연결 테스트</button>
+
+        <div id="status" class="meta"></div>
+        <div id="out" class="out" aria-live="polite"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dlgIoNames" class="panel-dialog" aria-labelledby="dlgIoNames-title">
+    <div class="panel-dialog-surface">
+      <header class="panel-dialog-head">
+        <div>
+          <h2 class="panel-dialog-title" id="dlgIoNames-title">Input / Output 이름</h2>
+        </div>
+        <div class="panel-dialog-actions">
+          <button id="saveIoNames" type="button" class="secondary" data-serial-busy>이름 저장</button>
+          <button type="button" class="secondary panel-dialog-close">닫기</button>
+        </div>
+      </header>
+      <div class="fold-body">
+        <div class="row" style="align-items: flex-start;">
+          <div class="io-grid">
+            <h3 class="meta" style="margin:0 0 0.5rem 0;">Input 1–16</h3>
+            <table aria-label="입력 이름">
+              <thead><tr><th>#</th><th>이름</th></tr></thead>
+              <tbody id="ioInBody"></tbody>
+            </table>
+          </div>
+          <div class="io-grid">
+            <h3 class="meta" style="margin:0 0 0.5rem 0;">Output 1–16</h3>
+            <table aria-label="출력 이름">
+              <thead><tr><th>#</th><th>이름</th></tr></thead>
+              <tbody id="ioOutBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="ioNameMsg" class="meta"></div>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dlgPresets" class="panel-dialog" aria-labelledby="dlgPresets-title">
+    <div class="panel-dialog-surface">
+      <header class="panel-dialog-head">
+        <div>
+          <h2 class="panel-dialog-title" id="dlgPresets-title">프리셋</h2>
+        </div>
+        <button type="button" class="secondary panel-dialog-close">닫기</button>
+      </header>
+      <div class="fold-body">
+        <section class="preset-panel-section preset-panel-section--apply" aria-labelledby="presetSectionApplyTitle">
+          <h3 class="preset-panel-section-title" id="presetSectionApplyTitle">기존 프리셋 적용하기</h3>
+          <div id="presetList" role="list" aria-label="저장된 프리셋 목록"></div>
+          <div id="presetExistingMsg" class="meta" aria-live="polite"></div>
+        </section>
+
+        <section class="preset-panel-section preset-panel-section--new" aria-labelledby="presetSectionNewTitle">
+          <h3 class="preset-panel-section-title" id="presetSectionNewTitle">프리셋 새로 추가하기</h3>
+          <div class="preset-new-meta-row">
+            <div class="preset-new-meta-field">
+              <label for="presetNewName">이름</label>
+              <input id="presetNewName" type="text" placeholder="예: 발표 모드" maxlength="200" autocomplete="off" />
+            </div>
+            <div class="preset-new-meta-field">
+              <label for="presetNewDesc">설명 (선택)</label>
+              <input id="presetNewDesc" type="text" placeholder="짧은 설명" autocomplete="off" />
+            </div>
+          </div>
+          <div class="route-pad-wrap preset-form-pads" style="margin-top:0.75rem">
+            <div class="route-pad-column">
+              <span class="route-pad-label meta">Input 1–16</span>
+              <div id="presetNewPadIn" class="route-pad-buttons" role="group" aria-label="프리셋 Input"></div>
+            </div>
+            <div class="route-pad-column">
+              <span class="route-pad-label meta">Output 1–16</span>
+              <div id="presetNewPadOut" class="route-pad-buttons" role="group" aria-label="프리셋 Output"></div>
+            </div>
+          </div>
+          <button type="button" class="secondary" id="presetNewAddPair">연결 줄 추가</button>
+          <label class="meta" style="margin-top:0.6rem;">등록할 연결</label>
+          <div id="presetNewRoutesVisual" class="preset-card-routes preset-routes-editor-visual" role="group" aria-label="추가할 연결 목록"></div>
+          <textarea id="presetNewRoutes" hidden aria-hidden="true"></textarea>
+          <button id="addPreset" type="button" data-serial-busy>프리셋 추가</button>
+          <div id="presetNewMsg" class="meta" aria-live="polite"></div>
+        </section>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dlgHistory" class="panel-dialog" aria-labelledby="dlgHistory-title">
+    <div class="panel-dialog-surface">
+      <header class="panel-dialog-head">
+        <div>
+          <h2 class="panel-dialog-title" id="dlgHistory-title">최근 작업</h2>
+          <span class="fold-summary-mark">히스토리 (최대 50건)</span>
+        </div>
+        <button type="button" class="secondary panel-dialog-close">닫기</button>
+      </header>
+      <div class="fold-body">
+        <div id="historyList" aria-live="polite"></div>
+      </div>
+    </div>
+  </dialog>
+
   <script>
     const $ = (id) => document.getElementById(id);
+    /** 빠른 열기 → <dialog.showModal()> 팝업 */
+    document.querySelectorAll("[data-open-panel]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const dlgId = btn.getAttribute("data-open-panel");
+        const dlg = dlgId && $(dlgId);
+        if (!(dlg && dlg.tagName === "DIALOG")) return;
+        dlg.showModal();
+        if (dlg.id === "dlgPresets") {
+          try {
+            await loadPresetsPanel();
+          } catch (_) {}
+          try {
+            refreshPresetRoutesEditorVisual($("presetNewRoutes"), $("presetNewRoutesVisual"));
+          } catch (_) {}
+        } else if (dlg.id === "dlgHistory") {
+          try {
+            await loadHistoryPanel();
+          } catch (_) {}
+        }
+      });
+    });
+    document.querySelectorAll(".panel-dialog-close").forEach((b) => {
+      b.addEventListener("click", () => {
+        const d = b.closest("dialog");
+        if (d) d.close();
+      });
+    });
+    document.querySelectorAll("dialog.panel-dialog").forEach((dlg) => {
+      dlg.addEventListener("click", (e) => {
+        if (e.target === dlg) dlg.close();
+      });
+    });
+
+    /** Input/Output 16 패드 ↔ #routeIn #routeOut 숫자 필드 동기화 */
+    function syncRoutePadHighlight() {
+      const ri = parseInt($("routeIn").value, 10);
+      const ro = parseInt($("routeOut").value, 10);
+      document.querySelectorAll("#routePadIn .route-pad-in").forEach((b) => {
+        const n = parseInt(b.dataset.ch, 10);
+        const on = n === ri && ri >= 1 && ri <= 16;
+        b.classList.toggle("is-selected", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      document.querySelectorAll("#routePadOut .route-pad-out").forEach((b) => {
+        const n = parseInt(b.dataset.ch, 10);
+        const on = n === ro && ro >= 1 && ro <= 16;
+        b.classList.toggle("is-selected", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    }
+
+    function initRoutePads() {
+      const pin = $("routePadIn");
+      const pout = $("routePadOut");
+      if (!pin || !pout || pin.dataset.ready === "1") return;
+      pin.dataset.ready = "1";
+      /* 채널 배치: 행 우선(첫 줄 1·2·3·4, …) — 라우팅 상태 그리드와 동일 */
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+          const n = r * 4 + c + 1;
+          const bi = document.createElement("button");
+          bi.type = "button";
+          bi.className = "secondary route-pad-in";
+          bi.dataset.ch = String(n);
+          bi.textContent = String(n);
+          bi.title = "Input " + n;
+          bi.setAttribute("aria-pressed", "false");
+          bi.addEventListener("click", () => {
+            $("routeIn").value = String(n);
+            syncRoutePadHighlight();
+          });
+          pin.appendChild(bi);
+
+          const bo = document.createElement("button");
+          bo.type = "button";
+          bo.className = "secondary route-pad-out";
+          bo.dataset.ch = String(n);
+          bo.textContent = String(n);
+          bo.title = "Output " + n;
+          bo.setAttribute("aria-pressed", "false");
+          bo.addEventListener("click", () => {
+            $("routeOut").value = String(n);
+            syncRoutePadHighlight();
+          });
+          pout.appendChild(bo);
+        }
+      }
+      $("routeIn").addEventListener("input", syncRoutePadHighlight);
+      $("routeIn").addEventListener("change", syncRoutePadHighlight);
+      $("routeOut").addEventListener("input", syncRoutePadHighlight);
+      $("routeOut").addEventListener("change", syncRoutePadHighlight);
+      syncRoutePadHighlight();
+    }
+
+    const ROUTE_INPUT_MODE_KEY = "matrixRouteInputMode";
+
+    function setRouteInputMode(usePads) {
+      const pNums = $("routePanelNums");
+      const pPads = $("routePanelPads");
+      const bNum = $("routeModeNums");
+      const bPad = $("routeModePads");
+      if (!pNums || !pPads || !bNum || !bPad) return;
+      if (usePads) {
+        pNums.hidden = true;
+        pNums.setAttribute("aria-hidden", "true");
+        pPads.hidden = false;
+        pPads.removeAttribute("aria-hidden");
+        bPad.classList.add("is-active");
+        bNum.classList.remove("is-active");
+        bPad.setAttribute("aria-pressed", "true");
+        bNum.setAttribute("aria-pressed", "false");
+      } else {
+        pPads.hidden = true;
+        pPads.setAttribute("aria-hidden", "true");
+        pNums.hidden = false;
+        pNums.removeAttribute("aria-hidden");
+        bNum.classList.add("is-active");
+        bPad.classList.remove("is-active");
+        bNum.setAttribute("aria-pressed", "true");
+        bPad.setAttribute("aria-pressed", "false");
+      }
+      try {
+        localStorage.setItem(ROUTE_INPUT_MODE_KEY, usePads ? "pads" : "nums");
+      } catch (_) {}
+    }
+
+    $("routeModeNums").addEventListener("click", () => setRouteInputMode(false));
+    $("routeModePads").addEventListener("click", () => setRouteInputMode(true));
+
+    /** config.json I/O 이름 — /api/status 별칭과 병합해 라우팅 칩에 표시 */
+    const ioAliasByChannel = { in: {}, out: {} };
+
+    function refreshIoAliasMapsFromSettings(j) {
+      ioAliasByChannel.in = {};
+      ioAliasByChannel.out = {};
+      (j.inputs || []).forEach((row) => {
+        if (!row || row.no === undefined || row.no === null) return;
+        const n = Number(row.no);
+        if (!(n >= 1 && n <= 16)) return;
+        ioAliasByChannel.in[n] = String(row.name || "").trim();
+      });
+      (j.outputs || []).forEach((row) => {
+        if (!row || row.no === undefined || row.no === null) return;
+        const n = Number(row.no);
+        if (!(n >= 1 && n <= 16)) return;
+        ioAliasByChannel.out[n] = String(row.name || "").trim();
+      });
+    }
+
+    /** 서버 문자열 우선; 비었으면 설정에서 채 넘 */
+    function pickInputAlias(fromServer, inputNo) {
+      const s =
+        typeof fromServer === "string" ? fromServer.trim() : "";
+      if (s) return s;
+      if (!(inputNo >= 1 && inputNo <= 16)) return "";
+      return ioAliasByChannel.in[inputNo] || "";
+    }
+
+    function pickOutputAlias(fromServer, outputNo) {
+      const s =
+        typeof fromServer === "string" ? fromServer.trim() : "";
+      if (s) return s;
+      if (!(outputNo >= 1 && outputNo <= 16)) return "";
+      return ioAliasByChannel.out[outputNo] || "";
+    }
+
+    /** Input→Output 단일 칩 (저장 프리셋 요약 · 편집기 동일 스타일) */
+    function presetRouteChipElement(inn, outn) {
+      const chip = document.createElement("span");
+      chip.className = "preset-route-chip";
+      const bin = document.createElement("b");
+      bin.textContent = String(inn);
+      chip.appendChild(bin);
+      const arr = document.createElement("span");
+      arr.className = "preset-route-arr";
+      arr.textContent = "→";
+      chip.appendChild(arr);
+      const bout = document.createElement("b");
+      bout.className = "preset-route-out-num";
+      bout.textContent = String(outn);
+      chip.appendChild(bout);
+      const ia = pickInputAlias("", inn);
+      const oa = pickOutputAlias("", outn);
+      chip.title = "Input " + inn + (ia ? ": " + ia : "") + " · Output " + outn + (oa ? ": " + oa : "");
+      return chip;
+    }
+
+    /** textarea ↔ 숨김 동기 줄목과 동일한 표시 칩; × 로 줄 삭제 */
+    function refreshPresetRoutesEditorVisual(ta, visualEl) {
+      if (!ta || !visualEl) return;
+      visualEl.className = "preset-card-routes preset-routes-editor-visual";
+      visualEl.innerHTML = "";
+      const routes = parseRoutesLines(ta.value);
+      if (!routes.length) {
+        visualEl.classList.add("preset-card-routes--empty");
+        visualEl.textContent = "없음";
+        return;
+      }
+      visualEl.classList.remove("preset-card-routes--empty");
+      visualEl.setAttribute("role", "group");
+      visualEl.setAttribute(
+        "aria-label",
+        (ta.id === "presetNewRoutes" ? "추가할 연결 " : "편집 중 연결 ") +
+          routes.length +
+          "건"
+      );
+      routes.forEach((r, i) => {
+        const inn = r.input_no;
+        const outn = r.output_no;
+        const row = document.createElement("span");
+        row.className = "preset-route-editor-chip-row";
+        row.appendChild(presetRouteChipElement(inn, outn));
+        const rm = document.createElement("button");
+        rm.type = "button";
+        rm.className = "secondary preset-route-chip-remove";
+        rm.textContent = "×";
+        rm.title = "이 연결 제거";
+        rm.setAttribute("aria-label", "연결 " + inn + "→" + outn + " 제거");
+        rm.addEventListener("click", () => {
+          const cur = parseRoutesLines(ta.value);
+          cur.splice(i, 1);
+          ta.value = cur.map((x) => x.input_no + "," + x.output_no).join("\n");
+          refreshPresetRoutesEditorVisual(ta, visualEl);
+        });
+        row.appendChild(rm);
+        visualEl.appendChild(row);
+      });
+    }
+
+    /** 저장된 프리셋 카드 — 연결 요약 칩 목록 */
+    function presetCardRoutesSummaryEl(routesRaw) {
+      const wrap = document.createElement("div");
+      wrap.className = "preset-card-routes";
+
+      const list = Array.isArray(routesRaw) ? routesRaw : [];
+      const pairs = [];
+      list.forEach((row) => {
+        const inn = Number(row.input_no);
+        const outn = Number(row.output_no);
+        if (inn >= 1 && inn <= 16 && outn >= 1 && outn <= 16)
+          pairs.push({ inn, outn });
+      });
+
+      if (!pairs.length) {
+        wrap.classList.add("preset-card-routes--empty");
+        wrap.textContent = "없음";
+        return wrap;
+      }
+
+      wrap.setAttribute("role", "group");
+      wrap.setAttribute("aria-label", "라우팅 " + pairs.length + "건");
+
+      pairs.forEach(({ inn, outn }) => {
+        wrap.appendChild(presetRouteChipElement(inn, outn));
+      });
+
+      return wrap;
+    }
+
+    /** Serial·라우팅·되돌리기 계열 재진입 방지(비동기 await 사이 두 번째 클릭) */
+    let __matrixControlInflight = false;
 
     async function loadSettings() {
       const r = await fetch("/api/settings");
       const j = await r.json();
+      refreshIoAliasMapsFromSettings(j);
       const s = j.serial;
       $("port").value = s.port;
       $("baud").value = s.baudrate;
@@ -202,9 +1018,6 @@
       $("parity").value = s.parity;
       $("stopbits").value = s.stopbits;
       $("timeout").value = s.timeout;
-      if (j.protocol && $("routeTemplate")) {
-        $("routeTemplate").textContent = j.protocol.route_template || "{input}X{output}.";
-      }
       renderIoTables(j.inputs || [], j.outputs || []);
     }
 
@@ -232,6 +1045,7 @@
         const td2 = document.createElement("td");
         const inp = document.createElement("input");
         inp.type = "text";
+        inp.maxLength = 120;
         inp.dataset.io = prefix;
         inp.dataset.no = String(n);
         inp.value = byNo[n] || "";
@@ -264,6 +1078,99 @@
       return routes;
     }
 
+    function appendRoutePairToTextarea(ta, inn, outn) {
+      if (!ta || !(inn >= 1 && inn <= 16 && outn >= 1 && outn <= 16)) return;
+      const line = inn + "," + outn;
+      const cur = String(ta.value || "").trim();
+      ta.value = cur ? cur + "\n" + line : line;
+    }
+
+    function syncPresetDraftPads(pinEl, outEl, draft, clsIn, clsOut) {
+      pinEl.querySelectorAll("button." + clsIn).forEach((b) => {
+        const n = parseInt(b.dataset.ch, 10);
+        const on = n === draft.inn && draft.inn >= 1 && draft.inn <= 16;
+        b.classList.toggle("is-selected", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      outEl.querySelectorAll("button." + clsOut).forEach((b) => {
+        const n = parseInt(b.dataset.ch, 10);
+        const on = n === draft.outn && draft.outn >= 1 && draft.outn <= 16;
+        b.classList.toggle("is-selected", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    }
+
+    /** 4×4 패드 행 우선 순서(on = r*4+c+1) — 라우팅 상태 그리드와 동일 */
+    function fillPresetPadsPair(pinEl, outEl, draft, clsIn, clsOut) {
+      pinEl.innerHTML = "";
+      outEl.innerHTML = "";
+      const sync = () => syncPresetDraftPads(pinEl, outEl, draft, clsIn, clsOut);
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+          const n = r * 4 + c + 1;
+          const bi = document.createElement("button");
+          bi.type = "button";
+          bi.className = "secondary " + clsIn;
+          bi.dataset.ch = String(n);
+          bi.textContent = String(n);
+          bi.title = "Input " + n;
+          bi.setAttribute("aria-pressed", "false");
+          bi.addEventListener("click", () => {
+            draft.inn = n;
+            sync();
+          });
+          pinEl.appendChild(bi);
+
+          const bo = document.createElement("button");
+          bo.type = "button";
+          bo.className = "secondary " + clsOut;
+          bo.dataset.ch = String(n);
+          bo.textContent = String(n);
+          bo.title = "Output " + n;
+          bo.setAttribute("aria-pressed", "false");
+          bo.addEventListener("click", () => {
+            draft.outn = n;
+            sync();
+          });
+          outEl.appendChild(bo);
+        }
+      }
+      sync();
+    }
+
+    function wirePresetNewPadUi() {
+      const pin = $("presetNewPadIn");
+      const pout = $("presetNewPadOut");
+      const addBtn = $("presetNewAddPair");
+      if (!pin || !pout || !addBtn || pin.dataset.wired === "1") return;
+      pin.dataset.wired = "1";
+      const draft = { inn: 1, outn: 1 };
+      pin._presetDraft = draft;
+      fillPresetPadsPair(pin, pout, draft, "preset-form-in", "preset-form-out");
+      addBtn.addEventListener("click", () => {
+        appendRoutePairToTextarea($("presetNewRoutes"), draft.inn, draft.outn);
+        refreshPresetRoutesEditorVisual($("presetNewRoutes"), $("presetNewRoutesVisual"));
+      });
+      refreshPresetRoutesEditorVisual($("presetNewRoutes"), $("presetNewRoutesVisual"));
+    }
+
+    function setupPresetEditorPads(editWrap) {
+      const pin = editWrap.querySelector(".preset-edit-pad-in");
+      const pout = editWrap.querySelector(".preset-edit-pad-out");
+      const ta = editWrap.querySelector(".preset-edit-routes");
+      const vis = editWrap.querySelector(".preset-edit-routes-visual");
+      const addBtn = editWrap.querySelector(".preset-edit-add-pair");
+      if (!pin || !pout || !ta || !addBtn || !vis) return;
+      const draft = { inn: 1, outn: 1 };
+      editWrap._presetDraft = draft;
+      fillPresetPadsPair(pin, pout, draft, "preset-edit-in", "preset-edit-out");
+      addBtn.addEventListener("click", () => {
+        appendRoutePairToTextarea(ta, draft.inn, draft.outn);
+        refreshPresetRoutesEditorVisual(ta, vis);
+      });
+      refreshPresetRoutesEditorVisual(ta, vis);
+    }
+
     async function loadPresetsPanel() {
       const r = await fetch("/api/presets");
       const j = await r.json();
@@ -272,24 +1179,44 @@
       box.innerHTML = "";
       const items = j.items || [];
       if (!items.length) {
+        box.innerHTML = "";
+        box.removeAttribute("role");
+        box.removeAttribute("aria-label");
         box.textContent = "(저장된 프리셋 없음)";
         return;
       }
-      const ids = items.map((p) => p.id);
-      items.forEach((p) => {
+      box.setAttribute("role", "list");
+      box.setAttribute("aria-label", "저장된 프리셋 " + items.length + "개");
+      items.forEach((p, idx) => {
         const id = p.id;
-        const card = document.createElement("div");
+        const card = document.createElement("article");
         card.className = "preset-card";
+        card.setAttribute("role", "listitem");
+
         const head = document.createElement("div");
+        head.className = "preset-list-row-head";
+
+        const ordEl = document.createElement("span");
+        ordEl.className = "preset-list-ord";
+        ordEl.textContent = idx + 1 + ".";
+        head.appendChild(ordEl);
+
+        const titleWrap = document.createElement("span");
+        titleWrap.className = "preset-list-title-inline";
         const strong = document.createElement("strong");
         strong.textContent = p.name || id;
-        head.appendChild(strong);
-        head.appendChild(document.createTextNode(" "));
-        const span = document.createElement("span");
-        span.className = "meta";
-        span.textContent = p.description || "";
-        head.appendChild(span);
+        titleWrap.appendChild(strong);
+        if (p.description) {
+          titleWrap.appendChild(document.createTextNode(" "));
+          const span = document.createElement("span");
+          span.className = "meta";
+          span.textContent = p.description;
+          titleWrap.appendChild(span);
+        }
+        head.appendChild(titleWrap);
         card.appendChild(head);
+
+        card.appendChild(presetCardRoutesSummaryEl(p.routes));
 
         const routesStr = (p.routes || []).map((x) => x.input_no + "," + x.output_no).join("\n");
 
@@ -298,9 +1225,10 @@
         br.setAttribute("data-serial-busy", "");
         br.textContent = "실행";
         br.addEventListener("click", async () => {
-          if (p.confirm_before_run && !confirm("프리셋을 실행할까요?")) return;
+          if (__matrixControlInflight) return;
+          __matrixControlInflight = true;
           setSerialUiBusy(true);
-          $("presetFormMsg").textContent = "";
+          $("presetExistingMsg").textContent = "";
           try {
             await saveSettings();
             const resp = await fetch("/api/presets/" + encodeURIComponent(id) + "/run", { method: "POST" });
@@ -319,12 +1247,12 @@
             await loadUndoPanel();
             await loadPresetsPanel();
           } catch (e) {
-            $("presetFormMsg").textContent = "실행 실패: " + e.message;
+            $("presetExistingMsg").textContent = "실행 실패: " + e.message;
           } finally {
+            __matrixControlInflight = false;
             setSerialUiBusy(false);
           }
         });
-        card.appendChild(br);
 
         const bd = document.createElement("button");
         bd.type = "button";
@@ -337,54 +1265,53 @@
             if (!resp.ok) throw new Error(await resp.text());
             await loadPresetsPanel();
           } catch (e) {
-            $("presetFormMsg").textContent = "삭제 실패: " + e.message;
+            $("presetExistingMsg").textContent = "삭제 실패: " + e.message;
           }
         });
-        card.appendChild(bd);
 
-        const bu = document.createElement("button");
-        bu.type = "button";
-        bu.className = "secondary";
-        bu.textContent = "↑";
-        bu.title = "위로";
-        bu.addEventListener("click", async () => {
-          const i = ids.indexOf(id);
-          if (i <= 0) return;
-          const next = ids.slice();
-          const t = next[i - 1];
-          next[i - 1] = next[i];
-          next[i] = t;
-          await persistPresetOrder(next);
-        });
-        card.appendChild(bu);
+        const safeEditPanelId =
+          "presetEditPanel_" + String(id).replace(/[^a-zA-Z0-9_-]/g, "_");
 
-        const bdn = document.createElement("button");
-        bdn.type = "button";
-        bdn.className = "secondary";
-        bdn.textContent = "↓";
-        bdn.title = "아래로";
-        bdn.addEventListener("click", async () => {
-          const i = ids.indexOf(id);
-          if (i < 0 || i >= ids.length - 1) return;
-          const next = ids.slice();
-          const t = next[i + 1];
-          next[i + 1] = next[i];
-          next[i] = t;
-          await persistPresetOrder(next);
-        });
-        card.appendChild(bdn);
+        const bEdit = document.createElement("button");
+        bEdit.type = "button";
+        bEdit.className = "secondary preset-edit-toggle";
+        bEdit.textContent = "수정";
+        bEdit.setAttribute("aria-expanded", "false");
+
+        const actions = document.createElement("div");
+        actions.className = "preset-card-actions";
+        actions.appendChild(br);
+        actions.appendChild(bd);
+        actions.appendChild(bEdit);
+        card.appendChild(actions);
 
         const editWrap = document.createElement("div");
-        editWrap.style.marginTop = "0.5rem";
+        editWrap.className = "preset-edit-panel";
+        editWrap.id = safeEditPanelId;
+        editWrap.hidden = true;
+        editWrap.setAttribute("role", "region");
+        editWrap.setAttribute("aria-label", "프리셋 편집: " + (p.name || id));
         editWrap.innerHTML =
           '<label class="meta">이름</label><input type="text" class="preset-edit-name" style="max-width:20rem" />' +
           '<label class="meta">설명</label><input type="text" class="preset-edit-desc" style="max-width:20rem" />' +
-          '<label class="meta">라우팅 줄</label><textarea class="preset-edit-routes" style="width:100%;max-width:28rem;min-height:3rem;font:inherit"></textarea>' +
-          '<label class="meta" style="display:flex;align-items:center;gap:0.5rem"><input type="checkbox" class="preset-edit-confirm" /> 실행 전 확인</label>';
+          '<div class="route-pad-wrap preset-card-pads">' +
+          '<div class="route-pad-column">' +
+          '<span class="route-pad-label meta">Input 1–16</span>' +
+          '<div class="preset-edit-pad-in route-pad-buttons" role="group" aria-label="프리셋 편집 Input"></div>' +
+          "</div>" +
+          '<div class="route-pad-column">' +
+          '<span class="route-pad-label meta">Output 1–16</span>' +
+          '<div class="preset-edit-pad-out route-pad-buttons" role="group" aria-label="프리셋 편집 Output"></div>' +
+          "</div>" +
+          "</div>" +
+          '<button type="button" class="secondary preset-edit-add-pair">연결 줄 추가</button>' +
+          '<label class="meta preset-edit-routes-label">등록할 연결</label>' +
+          '<div class="preset-edit-routes-visual preset-card-routes preset-routes-editor-visual" role="group" aria-label="편집 중인 연결"></div>' +
+          '<textarea class="preset-edit-routes" hidden aria-hidden="true"></textarea>';
         editWrap.querySelector(".preset-edit-name").value = p.name || "";
         editWrap.querySelector(".preset-edit-desc").value = p.description || "";
         editWrap.querySelector(".preset-edit-routes").value = routesStr;
-        editWrap.querySelector(".preset-edit-confirm").checked = !!p.confirm_before_run;
+        setupPresetEditorPads(editWrap);
         const bs = document.createElement("button");
         bs.type = "button";
         bs.className = "secondary";
@@ -392,7 +1319,7 @@
         bs.addEventListener("click", async () => {
           const routes = parseRoutesLines(editWrap.querySelector(".preset-edit-routes").value);
           if (!routes.length) {
-            $("presetFormMsg").textContent = "라우팅이 비어 있습니다.";
+            $("presetExistingMsg").textContent = "라우팅이 비어 있습니다.";
             return;
           }
           try {
@@ -402,36 +1329,39 @@
               body: JSON.stringify({
                 name: editWrap.querySelector(".preset-edit-name").value.trim(),
                 description: editWrap.querySelector(".preset-edit-desc").value.trim(),
-                confirm_before_run: editWrap.querySelector(".preset-edit-confirm").checked,
+                confirm_before_run: false,
                 routes: routes,
               }),
             });
             if (!resp.ok) throw new Error(await resp.text());
-            $("presetFormMsg").textContent = "저장됨.";
+            $("presetExistingMsg").textContent = "저장됨.";
             await loadPresetsPanel();
           } catch (e) {
-            $("presetFormMsg").textContent = "저장 실패: " + e.message;
+            $("presetExistingMsg").textContent = "저장 실패: " + e.message;
           }
         });
         editWrap.appendChild(bs);
         card.appendChild(editWrap);
 
+        bEdit.setAttribute("aria-controls", safeEditPanelId);
+        bEdit.addEventListener("click", () => {
+          const willOpen = !!editWrap.hidden;
+          box.querySelectorAll(".preset-edit-panel").forEach((el) => {
+            el.hidden = true;
+          });
+          box.querySelectorAll(".preset-edit-toggle").forEach((btn) => {
+            btn.textContent = "수정";
+            btn.setAttribute("aria-expanded", "false");
+          });
+          if (willOpen) {
+            editWrap.hidden = false;
+            bEdit.textContent = "편집 닫기";
+            bEdit.setAttribute("aria-expanded", "true");
+          }
+        });
+
         box.appendChild(card);
       });
-    }
-
-    async function persistPresetOrder(orderIds) {
-      try {
-        const resp = await fetch("/api/presets/order", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ order: orderIds }),
-        });
-        if (!resp.ok) throw new Error(await resp.text());
-        await loadPresetsPanel();
-      } catch (e) {
-        $("presetFormMsg").textContent = "순서 저장 실패: " + e.message;
-      }
     }
 
     async function saveSettings() {
@@ -454,18 +1384,92 @@
       }
     }
 
+    function fillRouteChip(lineEl, num, aliasMaybe) {
+      lineEl.innerHTML = "";
+      const wrap = document.createElement("span");
+      wrap.className = "route-wrap route-wrap--stack";
+
+      const lineNum = document.createElement("span");
+      lineNum.className = "route-chip-line route-chip-line--num";
+      const numEl = document.createElement("span");
+      numEl.className = "route-num";
+      if (num !== null && num !== undefined && !Number.isNaN(num)) {
+        numEl.textContent = String(num);
+      } else {
+        numEl.textContent = "—";
+      }
+      lineNum.appendChild(numEl);
+
+      const lineAlias = document.createElement("span");
+      lineAlias.className = "route-chip-line route-chip-line--alias";
+      const tail = document.createElement("span");
+      const nm = aliasMaybe !== undefined && aliasMaybe !== null ? String(aliasMaybe).trim() : "";
+      if (nm) {
+        tail.className = "route-tail";
+        tail.textContent = nm;
+      } else {
+        tail.className = "route-tail route-tail--placeholder";
+        tail.textContent = "\u00a0";
+        tail.setAttribute("aria-hidden", "true");
+      }
+      lineAlias.appendChild(tail);
+
+      wrap.appendChild(lineNum);
+      wrap.appendChild(lineAlias);
+      lineEl.appendChild(wrap);
+    }
+
     function renderRoutes(state) {
-      const tb = $("routeBody");
-      tb.innerHTML = "";
+      const grid = $("routeGrid");
+      grid.innerHTML = "";
+      const byOut = {};
       (state.routes || []).forEach((row) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = "<td>" + escapeHtml(row.output_display) + "</td><td>" + escapeHtml(row.input_display) + "</td>";
-        tb.appendChild(tr);
+        let on =
+          typeof row.output_no === "number" ? row.output_no : row.output_no !== undefined ? parseInt(String(row.output_no), 10) : NaN;
+        if (!(on >= 1 && on <= 16)) return;
+        byOut[on] = row;
       });
+      /* 표시 순서: 행 우선(첫 줄 1·2·3·4, …) */
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
+          const on = r * 4 + c + 1;
+          const row = byOut[on];
+          const cell = document.createElement("div");
+          cell.className = "route-cell";
+          cell.setAttribute("role", "group");
+          cell.setAttribute("aria-label", "출력 채널 " + on + ", 입력 번호 후 출력 번호 및 이름");
+
+          const lineIn = document.createElement("div");
+          lineIn.className = "route-cell-line route-in";
+          const lineOut = document.createElement("div");
+          lineOut.className = "route-cell-line route-out";
+
+          if (row && row.output_no !== undefined) {
+            const inn = row.input_no;
+            const iaFromSrv =
+              typeof row.input_alias === "string" ? row.input_alias : "";
+            const oaFromSrv =
+              typeof row.output_alias === "string" ? row.output_alias : "";
+            const inNum =
+              inn !== null && inn !== undefined && !Number.isNaN(Number(inn)) ? Number(inn) : null;
+            const ia = pickInputAlias(iaFromSrv, inNum);
+            const oa = pickOutputAlias(oaFromSrv, on);
+            fillRouteChip(lineIn, inNum, ia);
+            fillRouteChip(lineOut, on, oa);
+          } else {
+            fillRouteChip(lineIn, null, "");
+            fillRouteChip(lineOut, on, pickOutputAlias("", on));
+          }
+
+          cell.appendChild(lineIn);
+          cell.appendChild(lineOut);
+          grid.appendChild(cell);
+        }
+      }
+
       const at = state.last_checked_at || "—";
       $("routeMeta").textContent = "마지막 조회: " + at + (state.connected ? " · 연결됨" : " · 미연결/오류");
       $("routeErr").textContent = state.last_error || "";
-      $("rawPreview").textContent = state.last_raw_preview || "(없음)";
     }
 
     function escapeHtml(s) {
@@ -565,7 +1569,9 @@
         b.className = "secondary";
         b.textContent = "되돌리기: " + (it.title || aid);
         b.addEventListener("click", async () => {
+          if (__matrixControlInflight) return;
           if (!confirm("이전 라우팅으로 복원할까요?")) return;
+          __matrixControlInflight = true;
           $("undoMsg").textContent = "";
           setSerialUiBusy(true);
           try {
@@ -587,6 +1593,7 @@
           } catch (e) {
             $("undoMsg").textContent = "되돌리기 실패: " + e.message;
           } finally {
+            __matrixControlInflight = false;
             setSerialUiBusy(false);
           }
         });
@@ -616,6 +1623,8 @@
     }
 
     $("connTest").addEventListener("click", async () => {
+      if (__matrixControlInflight) return;
+      __matrixControlInflight = true;
       $("status").textContent = "";
       $("out").textContent = "전송 중…";
       setSerialUiBusy(true);
@@ -643,6 +1652,7 @@
           await loadUndoPanel();
         } catch (_) {}
       } finally {
+        __matrixControlInflight = false;
         setSerialUiBusy(false);
       }
     });
@@ -666,15 +1676,15 @@
     });
 
     $("addPreset").addEventListener("click", async () => {
-      $("presetFormMsg").textContent = "";
+      $("presetNewMsg").textContent = "";
       const name = ($("presetNewName").value || "").trim();
       const routes = parseRoutesLines($("presetNewRoutes").value);
       if (!name) {
-        $("presetFormMsg").textContent = "이름을 입력하세요.";
+        $("presetNewMsg").textContent = "이름을 입력하세요.";
         return;
       }
       if (!routes.length) {
-        $("presetFormMsg").textContent = "라우팅을 한 줄 이상 입력하세요 (input,output).";
+        $("presetNewMsg").textContent = "라우팅을 한 줄 이상 입력하세요 (input,output).";
         return;
       }
       try {
@@ -684,7 +1694,7 @@
           body: JSON.stringify({
             name: name,
             description: ($("presetNewDesc").value || "").trim(),
-            confirm_before_run: $("presetNewConfirm").checked,
+            confirm_before_run: false,
             routes: routes,
           }),
         });
@@ -692,22 +1702,31 @@
         $("presetNewName").value = "";
         $("presetNewDesc").value = "";
         $("presetNewRoutes").value = "";
-        $("presetNewConfirm").checked = false;
-        $("presetFormMsg").textContent = "추가됨.";
+        refreshPresetRoutesEditorVisual($("presetNewRoutes"), $("presetNewRoutesVisual"));
+        const pn = $("presetNewPadIn");
+        if (pn && pn._presetDraft) {
+          pn._presetDraft.inn = 1;
+          pn._presetDraft.outn = 1;
+          const po = $("presetNewPadOut");
+          syncPresetDraftPads(pn, po, pn._presetDraft, "preset-form-in", "preset-form-out");
+        }
+        $("presetNewMsg").textContent = "추가됨.";
         await loadPresetsPanel();
       } catch (e) {
-        $("presetFormMsg").textContent = "추가 실패: " + e.message;
+        $("presetNewMsg").textContent = "추가 실패: " + e.message;
       }
     });
 
-    $("routeSend").addEventListener("click", async () => {
+    async function runRouteSend() {
+      if (__matrixControlInflight) return;
+      __matrixControlInflight = true;
       $("routeSendMsg").textContent = "";
       setSerialUiBusy(true);
       try {
         const input_no = parseInt($("routeIn").value, 10);
         const output_no = parseInt($("routeOut").value, 10);
         const j = await postRouting(input_no, output_no);
-        $("routeSendMsg").textContent = "전송 완료: " + (j.command || "") + " — " + (j.message || "");
+        $("routeSendMsg").textContent = "연결 완료: " + (j.command || "") + " — " + (j.message || "");
         if (j.state) renderRoutes(j.state);
         await loadHistoryPanel();
         await loadUndoPanel();
@@ -717,52 +1736,22 @@
         await loadHistoryPanel();
         await loadUndoPanel();
       } finally {
+        __matrixControlInflight = false;
         setSerialUiBusy(false);
       }
-    });
+    }
 
-    $("preset12").addEventListener("click", async () => {
-      $("routeSendMsg").textContent = "";
-      setSerialUiBusy(true);
-      try {
-        const j = await postRouting(1, 2);
-        $("routeIn").value = "1";
-        $("routeOut").value = "2";
-        $("routeSendMsg").textContent = "테스트 1→2: " + (j.command || "") + " — " + (j.message || "");
-        if (j.state) renderRoutes(j.state);
-        await loadHistoryPanel();
-        await loadUndoPanel();
-        await loadPresetsPanel();
-      } catch (e) {
-        $("routeSendMsg").textContent = "요청 실패: " + e.message;
-        await loadHistoryPanel();
-        await loadUndoPanel();
-      } finally {
-        setSerialUiBusy(false);
-      }
-    });
+    $("routeSend").addEventListener("click", runRouteSend);
+    $("routeSendPad").addEventListener("click", runRouteSend);
 
-    $("preset22").addEventListener("click", async () => {
-      $("routeSendMsg").textContent = "";
-      setSerialUiBusy(true);
-      try {
-        const j = await postRouting(2, 2);
-        $("routeIn").value = "2";
-        $("routeOut").value = "2";
-        $("routeSendMsg").textContent = "테스트 2→2: " + (j.command || "") + " — " + (j.message || "");
-        if (j.state) renderRoutes(j.state);
-        await loadHistoryPanel();
-        await loadUndoPanel();
-        await loadPresetsPanel();
-      } catch (e) {
-        $("routeSendMsg").textContent = "요청 실패: " + e.message;
-        await loadHistoryPanel();
-        await loadUndoPanel();
-      } finally {
-        setSerialUiBusy(false);
-      }
-    });
-
+    initRoutePads();
+    wirePresetNewPadUi();
+    try {
+      if (localStorage.getItem(ROUTE_INPUT_MODE_KEY) === "nums") setRouteInputMode(false);
+      else setRouteInputMode(true);
+    } catch (_) {
+      setRouteInputMode(true);
+    }
     loadSettings()
       .then(loadRoutes)
       .then(loadHistoryPanel)
