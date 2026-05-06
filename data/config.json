@@ -15,140 +15,140 @@
     },
     "protocol": {
       "name": "A1616HD_SERIAL_DOT",
-      "route_template": "{input}X{output}.",
+      "route_template": "{input}v{output}.",
       "probe_command": "."
     }
   },
   "inputs": [
     {
       "no": 1,
-      "name": "dd"
+      "name": "스튜디오"
     },
     {
       "no": 2,
-      "name": ""
+      "name": "스튜디오"
     },
     {
       "no": 3,
-      "name": ""
+      "name": "스튜디오"
     },
     {
       "no": 4,
-      "name": ""
+      "name": "스튜디오"
     },
     {
       "no": 5,
-      "name": ""
+      "name": "스튜디오"
     },
     {
       "no": 6,
-      "name": ""
+      "name": "스튜디오"
     },
     {
       "no": 7,
-      "name": ""
+      "name": "메인 풀스크린"
     },
     {
       "no": 8,
-      "name": ""
+      "name": "OBS 좌측"
     },
     {
       "no": 9,
-      "name": ""
+      "name": "OBS 우측"
     },
     {
       "no": 10,
-      "name": ""
+      "name": "백업1 풀스크린"
     },
     {
       "no": 11,
-      "name": ""
+      "name": "백업2 풀스크린"
     },
     {
       "no": 12,
-      "name": ""
+      "name": "타이머 미니PC"
     },
     {
       "no": 13,
-      "name": ""
+      "name": "발표자료 위"
     },
     {
       "no": 14,
-      "name": ""
+      "name": "발표자료 아래"
     },
     {
       "no": 15,
-      "name": ""
+      "name": "캡쳐 여분"
     },
     {
       "no": 16,
-      "name": ""
+      "name": "캡쳐 여분"
     }
   ],
   "outputs": [
     {
       "no": 1,
-      "name": ""
+      "name": "메인PC 캡쳐"
     },
     {
       "no": 2,
-      "name": ""
+      "name": "메인PC 캡쳐"
     },
     {
       "no": 3,
-      "name": ""
+      "name": "메인PC 캡쳐"
     },
     {
       "no": 4,
-      "name": ""
+      "name": "메인PC 캡쳐"
     },
     {
       "no": 5,
-      "name": ""
+      "name": "메인PC 캡쳐"
     },
     {
       "no": 6,
-      "name": ""
+      "name": "메인PC 캡쳐"
     },
     {
       "no": 7,
-      "name": ""
+      "name": "백업PC1 캡쳐"
     },
     {
       "no": 8,
-      "name": ""
+      "name": "백업PC2 캡쳐"
     },
     {
       "no": 9,
-      "name": ""
+      "name": "콘솔 좌측 TV"
     },
     {
       "no": 10,
-      "name": ""
+      "name": "콘솔 우측 TV"
     },
     {
       "no": 11,
-      "name": ""
+      "name": "스튜디오 위 TV"
     },
     {
       "no": 12,
-      "name": ""
+      "name": "스튜디오 아래 TV"
     },
     {
       "no": 13,
-      "name": ""
+      "name": "프롬프터 위 모니터"
     },
     {
       "no": 14,
-      "name": ""
+      "name": "프롬프터 아래 모니터"
     },
     {
       "no": 15,
-      "name": ""
+      "name": "메인PC 캡쳐"
     },
     {
       "no": 16,
-      "name": ""
+      "name": "녹화PC 캡쳐"
     }
   ]
 }

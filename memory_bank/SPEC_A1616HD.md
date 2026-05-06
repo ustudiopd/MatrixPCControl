@@ -103,7 +103,7 @@
 ## 5. Serial 통신
 
 - 프로파일: `A1616HD_SERIAL_DOT`
-- 명령: 상태 `Status.`, 버전 `%Version;`, 라우팅 `{in}X{out}.`, `{in}All.`, `Save{n}.`, `Recall{n}.`
+- 명령: 상태 `Status.`, 버전 `%Version;`, 라우팅 `{in}v{out}.`(설정 `route_template`), `{in}All.`, `Save{n}.`, `Recall{n}.`
 - Driver 메서드: `open/close/reconnect`, `test_connection`, `get_version`, `get_routing_status`, `get_signal_status`, `route`, `route_many`, `send_command`, `parse_status_response`
 - `send_command`: 포트 확인 → in/out 버퍼 초기화 → encode → write → flush → timeout까지 읽기 → decode → 길이 제한 → 반환.
 - `route_many`: 순차 + delay, 실패 시 중단, 결과 목록 반환.
@@ -182,7 +182,7 @@ data/
       "name": "A1616HD_SERIAL_DOT",
       "status_command": "Status.",
       "version_command": "%Version;",
-      "route_template": "{input}X{output}."
+      "route_template": "{input}v{output}."
     }
   },
   "status": {

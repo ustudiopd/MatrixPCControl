@@ -79,7 +79,7 @@ class SerialUpdate(BaseModel):
 
 
 class RouteBody(BaseModel):
-    """수동 라우팅: Input → Output (장비 확인 형식 `{input}X{output}.`)."""
+    """수동 라우팅: Input → Output (장비 확인 형식 `route_template`, 기본 `{input}v{output}.`)."""
 
     input_no: int = Field(ge=1, le=16)
     output_no: int = Field(ge=1, le=16)
@@ -688,7 +688,7 @@ def post_undo(action_id: str) -> dict:
 
 @app.post("/api/routing")
 def post_routing(body: RouteBody) -> dict:
-    """`{input}X{output}.` 형식으로 전송 — 성공 시 state.json 해당 출력만 갱신 + history·undo_stack."""
+    """`route_template`(기본 `{input}v{output}.`)으로 전송 — 성공 시 state.json 해당 출력만 갱신 + history·undo_stack."""
 
     cfg = load_config()
     title = _route_title(cfg, body.input_no, body.output_no)
