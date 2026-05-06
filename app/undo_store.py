@@ -13,10 +13,11 @@ def undo_stack_path() -> Path:
 
 
 def undo_max_items(cfg: dict[str, Any]) -> int:
+    """호환용 — 되돌리기 스택은 항상 1건만 유지한다."""
     try:
-        return max(1, min(100, int(cfg.get("undo", {}).get("max_items", 20))))
+        return max(1, min(100, int(cfg.get("undo", {}).get("max_items", 1))))
     except (TypeError, ValueError):
-        return 20
+        return 1
 
 
 def load_undo_stack() -> list[dict[str, Any]]:
@@ -30,7 +31,12 @@ def load_undo_stack() -> list[dict[str, Any]]:
         return []
     if not isinstance(data, list):
         return []
-    return [x for x in data if isinstance(x, dict)]
+    items = [x for x in data if isinstance(x, dict)]
+    # 직전 작업 한 단계만: 예전 다건 스택이 있으면 최신 1건만 남기고 저장
+    if len(items) > 1:
+        items = items[:1]
+        save_undo_stack(items)
+    return items
 
 
 def save_undo_stack(items: list[dict[str, Any]]) -> None:
@@ -38,9 +44,9 @@ def save_undo_stack(items: list[dict[str, Any]]) -> None:
 
 
 def prepend_undo(cfg: dict[str, Any], entry: dict[str, Any]) -> None:
-    items = load_undo_stack()
-    items.insert(0, entry)
-    save_undo_stack(items[: undo_max_items(cfg)])
+    """새 항목만 스택에 둔다(이전 되돌리기 대상은 버림 — 한 단계씩만)."""
+    _ = cfg
+    save_undo_stack([entry])
 
 
 def remove_undo_by_action_id(action_id: str) -> bool:

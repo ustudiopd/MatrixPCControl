@@ -39,14 +39,77 @@
     th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #30363d; }
     th { background: #21262d; color: #8b949e; font-weight: 600; }
     tr:last-child td { border-bottom: none; }
-    #historyList, #undoList {
+    #historyList, #undoPanel {
       margin-top: 0.5rem; padding: 0.75rem; border-radius: 8px;
       background: #161b22; border: 1px solid #30363d; font-size: 0.85rem;
     }
     #historyList { max-height: 14rem; overflow: auto; }
     .hist-row { padding: 0.35rem 0; border-bottom: 1px solid #21262d; }
     .hist-row:last-child { border-bottom: none; }
-    #undoList button { margin-top: 0.5rem; display: block; }
+    .undo-btn-fill {
+      font-size: 0.88rem;
+      color: inherit;
+      line-height: 1.5;
+      word-break: break-word;
+      margin: 0;
+      width: 100%;
+      text-align: left;
+    }
+    .undo-btn-fill.is-empty {
+      color: #8b949e;
+      font-size: 0.82rem;
+    }
+    .undo-btn-fill.undo-btn-fill--flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: 0.35rem;
+      row-gap: 0.35rem;
+    }
+    .undo-flow-sep {
+      color: #6e7681;
+      font-weight: 700;
+      padding: 0 0.1rem;
+    }
+    .undo-flow-arrow {
+      display: inline-flex;
+      align-items: center;
+      color: #58a6ff;
+      flex-shrink: 0;
+      margin: 0 0.05rem;
+    }
+    .undo-flow-arrow svg {
+      display: block;
+    }
+    .undo-flow-frag {
+      word-break: break-word;
+    }
+    #undoPanel .undo-one-btn {
+      margin-top: 0.85rem;
+      margin-right: 0;
+      width: 100%;
+      max-width: 100%;
+      padding: 0.65rem 1rem;
+      font-weight: 500;
+      text-align: left;
+      height: auto;
+      min-height: 2.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #e6edf3;
+    }
+    #undoPanel .undo-one-btn:not(:disabled) {
+      background: #238636;
+      border-color: #2ea043;
+      color: #fff;
+      cursor: pointer;
+    }
+    #undoPanel .undo-one-btn:not(:disabled) .undo-flow-arrow {
+      color: #aff5c4;
+    }
     .io-grid { flex: 1; min-width: 14rem; max-width: 22rem; }
     .io-grid table { font-size: 0.8rem; }
     .io-grid input[type="text"] { max-width: 100%; padding: 0.25rem 0.4rem; }
@@ -376,7 +439,9 @@
     }
     .route-pad-send-row button[data-serial-busy] {
       margin-top: 0 !important;
-      padding: 0.45rem 0.75rem;
+      padding: 0.65rem 1.45rem;
+      font-size: 1.05rem;
+      font-weight: 600;
       border: 1px solid #238636;
       box-sizing: border-box;
       line-height: 1.25;
@@ -402,9 +467,9 @@
       align-items: flex-start;
     }
     .route-pad-column {
-      flex: 1 1 12rem;
+      flex: 1 1 14rem;
       min-width: 0;
-      max-width: 22rem;
+      max-width: 30rem;
     }
     .route-pad-label {
       display: block;
@@ -423,6 +488,85 @@
       font-size: 0.82rem;
       min-height: 2.1rem;
       box-sizing: border-box;
+    }
+    /* 메인 라우팅 패드만: 크게 + IN/OUT·번호·이름(라우팅 상태와 유사) */
+    #routePanelPads #routePadIn.route-pad-buttons,
+    #routePanelPads #routePadOut.route-pad-buttons {
+      gap: 0.52rem;
+    }
+    #routePanelPads #routePadIn .route-pad-in,
+    #routePanelPads #routePadOut .route-pad-out {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.2rem;
+      padding: 0.62rem 0.38rem;
+      /* 이름 2줄(line-height 1.3) + IN/OUT + 번호 + 간격 + 패딩 */
+      min-height: calc(
+        0.62rem + 0.82rem + 0.2rem + 1.62rem + 0.2rem + (0.86rem * 1.3 * 2) + 0.62rem
+      );
+      box-sizing: border-box;
+      line-height: 1.15;
+    }
+    #routePanelPads .route-pad-btn-io {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      line-height: 1;
+      opacity: 0.92;
+    }
+    #routePanelPads #routePadIn .route-pad-btn-io {
+      color: #a5d6ff;
+    }
+    #routePanelPads #routePadOut .route-pad-btn-io {
+      color: #8b949e;
+    }
+    #routePanelPads .route-pad-btn-num {
+      font-size: 1.62rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    #routePanelPads #routePadOut .route-pad-btn-num {
+      color: #f0f6fc;
+    }
+    #routePanelPads .route-pad-btn-name {
+      font-size: 0.86rem;
+      font-weight: 400;
+      line-height: 1.3;
+      max-width: 100%;
+      text-align: center;
+      word-break: keep-all;
+      overflow-wrap: normal;
+      /* 항상 이름 칸 높이 = 정확히 2줄 */
+      min-height: calc(2 * 1.3em);
+      max-height: calc(2 * 1.3em);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #routePanelPads .route-pad-btn-name--empty {
+      opacity: 0.35;
+    }
+    #routePanelPads .route-pad-btn-name--empty::after {
+      content: "—";
+      font-size: 0.72rem;
+    }
+    #routePanelPads #routePadIn .route-pad-in.is-selected .route-pad-btn-io,
+    #routePanelPads #routePadIn .route-pad-in.is-selected .route-pad-btn-num,
+    #routePanelPads #routePadIn .route-pad-in.is-selected .route-pad-btn-name,
+    #routePanelPads #routePadOut .route-pad-out.is-selected .route-pad-btn-io,
+    #routePanelPads #routePadOut .route-pad-out.is-selected .route-pad-btn-num,
+    #routePanelPads #routePadOut .route-pad-out.is-selected .route-pad-btn-name {
+      color: #fff;
+    }
+    #routePanelPads #routePadOut .route-pad-out.is-selected .route-pad-btn-name--empty::after {
+      color: #fff;
+      opacity: 0.6;
     }
     .route-pad-buttons button.route-pad-in.is-selected,
     .route-pad-buttons button.route-pad-out.is-selected,
@@ -469,8 +613,8 @@
     .route-cell-line {
       flex: 1;
       min-width: 0;
-      overflow: hidden;
-      word-break: break-word;
+      overflow: visible;
+      word-break: normal;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
@@ -490,34 +634,52 @@
       padding-left: 0.12rem;
     }
     .route-num {
-      font-size: 1.38rem;
+      font-size: 1.52rem;
       font-weight: 700;
-      line-height: 1.15;
+      line-height: 1.12;
       letter-spacing: -0.02em;
       flex-shrink: 0;
     }
     .route-cell-line.route-out .route-num { color: #f0f6fc; }
     .route-tail {
-      font-size: 0.68rem;
+      font-size: 0.82rem;
       line-height: 1.35;
       font-weight: 400;
       opacity: 0.92;
       max-width: 100%;
       white-space: normal;
-      word-break: break-word;
-      display: inline-block;
+      /* 한글·한자: 띄어쓰기 단위 위주로 줄바꿈(글자 중간 끊김 완화). 부모의 break-word 제거 필요 */
+      word-break: keep-all;
+      overflow-wrap: normal;
+      display: block;
+      width: 100%;
+      text-align: center;
     }
     .route-tail.route-tail--placeholder {
       visibility: hidden;
       user-select: none;
       pointer-events: none;
     }
+    .route-io-tag {
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      line-height: 1.1;
+      flex-shrink: 0;
+      opacity: 0.95;
+    }
+    .route-cell-line.route-in .route-io-tag {
+      color: #a5d6ff;
+    }
+    .route-cell-line.route-out .route-io-tag {
+      color: #8b949e;
+    }
     .route-wrap.route-wrap--stack {
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.2rem;
+      gap: 0.16rem;
       width: 100%;
       max-width: 100%;
       min-width: 0;
@@ -531,9 +693,11 @@
     .route-chip-line--alias {
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
       align-self: stretch;
-      min-height: calc(0.68rem * 1.35);
+      min-width: 0;
+      width: 100%;
+      min-height: 0;
     }
     @media (max-width: 36rem) {
       #routeGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -595,7 +759,11 @@
   <div id="routeErr" class="meta"></div>
 
   <h2 style="margin-top:1.75rem">되돌리기</h2>
-  <div id="undoList"></div>
+  <div id="undoPanel">
+    <button type="button" id="undoOneBtn" class="undo-one-btn" disabled>
+      <span id="undoBtnFill" class="undo-btn-fill is-empty" role="status">되돌릴 작업 없음</span>
+    </button>
+  </div>
   <div id="undoMsg" class="meta"></div>
 
   <dialog id="dlgSerial" class="panel-dialog" aria-labelledby="dlgSerial-title">
@@ -809,8 +977,7 @@
           bi.type = "button";
           bi.className = "secondary route-pad-in";
           bi.dataset.ch = String(n);
-          bi.textContent = String(n);
-          bi.title = "Input " + n;
+          applyMainRoutePadButtonContent(bi, "IN", n, pickInputAlias("", n));
           bi.setAttribute("aria-pressed", "false");
           bi.addEventListener("click", () => {
             $("routeIn").value = String(n);
@@ -822,8 +989,7 @@
           bo.type = "button";
           bo.className = "secondary route-pad-out";
           bo.dataset.ch = String(n);
-          bo.textContent = String(n);
-          bo.title = "Output " + n;
+          applyMainRoutePadButtonContent(bo, "OUT", n, pickOutputAlias("", n));
           bo.setAttribute("aria-pressed", "false");
           bo.addEventListener("click", () => {
             $("routeOut").value = String(n);
@@ -909,6 +1075,159 @@
       if (s) return s;
       if (!(outputNo >= 1 && outputNo <= 16)) return "";
       return ioAliasByChannel.out[outputNo] || "";
+    }
+
+    /** 메인 라우팅 패드 — 라우팅 상태 셀처럼 IN/OUT + 번호 + 이름 */
+    function applyMainRoutePadButtonContent(btn, ioTag, num, nameStr) {
+      btn.textContent = "";
+      const io = document.createElement("span");
+      io.className = "route-pad-btn-io";
+      io.textContent = ioTag;
+      io.setAttribute("aria-hidden", "true");
+      const numEl = document.createElement("span");
+      numEl.className = "route-pad-btn-num";
+      numEl.textContent = String(num);
+      const nm = document.createElement("span");
+      nm.className = "route-pad-btn-name";
+      nm.setAttribute("lang", "ko");
+      const nmt = (nameStr || "").trim();
+      if (nmt) {
+        nm.textContent = nmt;
+      } else {
+        nm.classList.add("route-pad-btn-name--empty");
+      }
+      btn.appendChild(io);
+      btn.appendChild(numEl);
+      btn.appendChild(nm);
+      const bits = [ioTag + " " + num + "번"];
+      if (nmt) bits.push(nmt);
+      btn.title = bits.join(" — ");
+      btn.setAttribute("aria-label", bits.join(", "));
+    }
+
+    function refreshMainRoutePadLabels() {
+      document.querySelectorAll("#routePadIn .route-pad-in").forEach((b) => {
+        const n = parseInt(b.dataset.ch, 10);
+        if (!(n >= 1 && n <= 16)) return;
+        applyMainRoutePadButtonContent(b, "IN", n, pickInputAlias("", n));
+      });
+      document.querySelectorAll("#routePadOut .route-pad-out").forEach((b) => {
+        const n = parseInt(b.dataset.ch, 10);
+        if (!(n >= 1 && n <= 16)) return;
+        applyMainRoutePadButtonContent(b, "OUT", n, pickOutputAlias("", n));
+      });
+    }
+
+    /** 되돌리기 한 줄용 — 이름 있으면 이름만, 없으면 채널 번호 */
+    function undoInBrief(inputNo) {
+      if (inputNo == null || inputNo === "") return "—";
+      const n = Number(inputNo);
+      if (!Number.isFinite(n)) return String(inputNo);
+      const name = pickInputAlias("", n);
+      return name || String(n);
+    }
+
+    function undoRouteMapFromList(list) {
+      const m = Object.create(null);
+      (list || []).forEach((x) => {
+        if (!x || x.output_no == null || x.output_no === "") return;
+        const o = Number(x.output_no);
+        if (!Number.isFinite(o)) return;
+        m[o] = x.input_no;
+      });
+      return m;
+    }
+
+    function undoCollectOutputRows(it) {
+      const before = undoRouteMapFromList(it.before_routes);
+      const after = undoRouteMapFromList(it.after_routes);
+      const keys = Object.keys(before)
+        .concat(Object.keys(after))
+        .map(Number)
+        .filter((n) => Number.isFinite(n));
+      return [...new Set(keys)].sort((a, b) => a - b).map((o) => ({
+        outputNo: o,
+        beforeIn: Object.prototype.hasOwnProperty.call(before, o) ? before[o] : undefined,
+        afterIn: Object.prototype.hasOwnProperty.call(after, o) ? after[o] : undefined,
+      }));
+    }
+
+    function undoOutBrief(outputNo) {
+      const n = Number(outputNo);
+      if (!Number.isFinite(n)) return "?";
+      const a = pickOutputAlias("", n);
+      return a ? String(n) + " (" + a + ")" : String(n);
+    }
+
+    /** 확인창·접근성용 — 글자 화살표만 사용 */
+    function formatUndoOneLinePlain(it) {
+      const rows = undoCollectOutputRows(it);
+      return rows
+        .map(({ outputNo, beforeIn, afterIn }) => {
+          const ob = undoOutBrief(outputNo);
+          return (
+            "IN " +
+            undoInBrief(beforeIn) +
+            " OUT " +
+            ob +
+            " → IN " +
+            undoInBrief(afterIn) +
+            " OUT " +
+            ob
+          );
+        })
+        .join("  ·  ");
+    }
+
+    function createUndoFlowArrow() {
+      const wrap = document.createElement("span");
+      wrap.className = "undo-flow-arrow";
+      wrap.setAttribute("aria-hidden", "true");
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 36 10");
+      svg.setAttribute("width", "32");
+      svg.setAttribute("height", "10");
+      svg.setAttribute("focusable", "false");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", "M2 5h24M22 2l8 3-8 3");
+      path.setAttribute("stroke", "currentColor");
+      path.setAttribute("stroke-width", "1.35");
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(path);
+      wrap.appendChild(svg);
+      return wrap;
+    }
+
+    function renderUndoSummaryFlow(fillEl, it) {
+      while (fillEl.firstChild) fillEl.removeChild(fillEl.firstChild);
+      fillEl.classList.add("undo-btn-fill--flow");
+      const rows = undoCollectOutputRows(it);
+      rows.forEach(({ outputNo, beforeIn, afterIn }, idx) => {
+        if (idx > 0) {
+          const sep = document.createElement("span");
+          sep.className = "undo-flow-sep";
+          sep.textContent = "·";
+          sep.setAttribute("aria-hidden", "true");
+          fillEl.appendChild(sep);
+        }
+        const ob = undoOutBrief(outputNo);
+        const left = document.createElement("span");
+        left.className = "undo-flow-frag";
+        left.textContent = "IN " + undoInBrief(beforeIn) + " OUT " + ob;
+        fillEl.appendChild(left);
+        fillEl.appendChild(createUndoFlowArrow());
+        const right = document.createElement("span");
+        right.className = "undo-flow-frag";
+        right.textContent = "IN " + undoInBrief(afterIn) + " OUT " + ob;
+        fillEl.appendChild(right);
+      });
+    }
+
+    function formatUndoConfirmText(it, head) {
+      const one = formatUndoOneLinePlain(it);
+      return one ? one + "\n(" + head + ")" : head;
     }
 
     /** Input→Output 단일 칩 (저장 프리셋 요약 · 편집기 동일 스타일) */
@@ -1006,11 +1325,16 @@
 
     /** Serial·라우팅·되돌리기 계열 재진입 방지(비동기 await 사이 두 번째 클릭) */
     let __matrixControlInflight = false;
+    /** 되돌리기 UI는 스택 첫 항목만 사용 */
+    let undoPendingActionId = null;
+    /** 확인창용 전체 문구(제목 + 라우트 요약) */
+    let undoConfirmPromptText = "";
 
     async function loadSettings() {
       const r = await fetch("/api/settings");
       const j = await r.json();
       refreshIoAliasMapsFromSettings(j);
+      refreshMainRoutePadLabels();
       const s = j.serial;
       $("port").value = s.port;
       $("baud").value = s.baudrate;
@@ -1384,10 +1708,18 @@
       }
     }
 
-    function fillRouteChip(lineEl, num, aliasMaybe) {
+    function fillRouteChip(lineEl, num, aliasMaybe, ioTag) {
       lineEl.innerHTML = "";
       const wrap = document.createElement("span");
       wrap.className = "route-wrap route-wrap--stack";
+
+      if (ioTag) {
+        const tag = document.createElement("span");
+        tag.className = "route-io-tag";
+        tag.textContent = ioTag;
+        tag.setAttribute("aria-hidden", "true");
+        wrap.appendChild(tag);
+      }
 
       const lineNum = document.createElement("span");
       lineNum.className = "route-chip-line route-chip-line--num";
@@ -1406,7 +1738,9 @@
       const nm = aliasMaybe !== undefined && aliasMaybe !== null ? String(aliasMaybe).trim() : "";
       if (nm) {
         tail.className = "route-tail";
+        tail.setAttribute("lang", "ko");
         tail.textContent = nm;
+        tail.title = nm;
       } else {
         tail.className = "route-tail route-tail--placeholder";
         tail.textContent = "\u00a0";
@@ -1422,6 +1756,7 @@
     function renderRoutes(state) {
       const grid = $("routeGrid");
       grid.innerHTML = "";
+      grid.setAttribute("lang", "ko");
       const byOut = {};
       (state.routes || []).forEach((row) => {
         let on =
@@ -1454,11 +1789,11 @@
               inn !== null && inn !== undefined && !Number.isNaN(Number(inn)) ? Number(inn) : null;
             const ia = pickInputAlias(iaFromSrv, inNum);
             const oa = pickOutputAlias(oaFromSrv, on);
-            fillRouteChip(lineIn, inNum, ia);
-            fillRouteChip(lineOut, on, oa);
+            fillRouteChip(lineIn, inNum, ia, "IN");
+            fillRouteChip(lineOut, on, oa, "OUT");
           } else {
-            fillRouteChip(lineIn, null, "");
-            fillRouteChip(lineOut, on, pickOutputAlias("", on));
+            fillRouteChip(lineIn, null, "", "IN");
+            fillRouteChip(lineOut, on, pickOutputAlias("", on), "OUT");
           }
 
           cell.appendChild(lineIn);
@@ -1518,9 +1853,8 @@
       document.querySelectorAll("[data-serial-busy]").forEach((el) => {
         el.disabled = busy;
       });
-      document.querySelectorAll("#undoList button").forEach((b) => {
-        b.disabled = busy;
-      });
+      const undoBtn = $("undoOneBtn");
+      if (undoBtn) undoBtn.disabled = busy || !undoPendingActionId;
     }
 
     async function loadHistoryPanel() {
@@ -1554,52 +1888,77 @@
     async function loadUndoPanel() {
       const r = await fetch("/api/undo");
       const j = await r.json();
-      const box = $("undoList");
-      box.innerHTML = "";
+      const fill = $("undoBtnFill");
+      const btn = $("undoOneBtn");
       const items = j.items || [];
-      if (!items.length) {
-        box.textContent = "(되돌릴 작업 없음)";
+      const it = items[0];
+      undoPendingActionId = it && it.action_id ? String(it.action_id) : null;
+      undoConfirmPromptText = "";
+      if (!undoPendingActionId) {
+        if (fill) {
+          fill.classList.add("is-empty");
+          fill.classList.remove("undo-btn-fill--flow");
+          while (fill.firstChild) fill.removeChild(fill.firstChild);
+          fill.textContent = "되돌릴 작업 없음";
+        }
+        if (btn) {
+          btn.title = "";
+          btn.setAttribute("aria-label", "되돌릴 작업 없음");
+          btn.disabled = true;
+        }
         return;
       }
-      items.forEach((it) => {
-        const aid = it.action_id;
-        if (!aid) return;
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "secondary";
-        b.textContent = "되돌리기: " + (it.title || aid);
-        b.addEventListener("click", async () => {
-          if (__matrixControlInflight) return;
-          if (!confirm("이전 라우팅으로 복원할까요?")) return;
-          __matrixControlInflight = true;
-          $("undoMsg").textContent = "";
-          setSerialUiBusy(true);
-          try {
-            const resp = await fetch("/api/undo/" + encodeURIComponent(aid), { method: "POST" });
-            const text = await resp.text();
-            let body = {};
-            try {
-              body = text ? JSON.parse(text) : {};
-            } catch {
-              throw new Error(text.slice(0, 200));
-            }
-            if (!resp.ok) {
-              throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail || body));
-            }
-            $("undoMsg").textContent = "복원 완료.";
-            if (body.state) renderRoutes(body.state);
-            await loadHistoryPanel();
-            await loadUndoPanel();
-          } catch (e) {
-            $("undoMsg").textContent = "되돌리기 실패: " + e.message;
-          } finally {
-            __matrixControlInflight = false;
-            setSerialUiBusy(false);
-          }
-        });
-        box.appendChild(b);
-      });
+      const head = it.title || undoPendingActionId;
+      const rows = undoCollectOutputRows(it);
+      undoConfirmPromptText = rows.length ? formatUndoConfirmText(it, head) : head;
+      if (fill) {
+        fill.classList.remove("is-empty");
+        if (rows.length) {
+          renderUndoSummaryFlow(fill, it);
+        } else {
+          fill.classList.remove("undo-btn-fill--flow");
+          while (fill.firstChild) fill.removeChild(fill.firstChild);
+          fill.textContent = head;
+        }
+      }
+      if (btn) {
+        btn.title = undoConfirmPromptText;
+        const plain = rows.length ? formatUndoOneLinePlain(it) : head;
+        btn.setAttribute("aria-label", "되돌리기: " + plain + (head ? " — " + head : ""));
+        btn.disabled = __matrixControlInflight;
+      }
     }
+
+    $("undoOneBtn").addEventListener("click", async () => {
+      const aid = undoPendingActionId;
+      if (!aid || __matrixControlInflight) return;
+      if (!confirm(undoConfirmPromptText + "\n\n이전 연결로 복원할까요?")) return;
+      __matrixControlInflight = true;
+      $("undoMsg").textContent = "";
+      setSerialUiBusy(true);
+      try {
+        const resp = await fetch("/api/undo/" + encodeURIComponent(aid), { method: "POST" });
+        const text = await resp.text();
+        let body = {};
+        try {
+          body = text ? JSON.parse(text) : {};
+        } catch {
+          throw new Error(text.slice(0, 200));
+        }
+        if (!resp.ok) {
+          throw new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail || body));
+        }
+        $("undoMsg").textContent = "복원 완료.";
+        if (body.state) renderRoutes(body.state);
+        await loadHistoryPanel();
+        await loadUndoPanel();
+      } catch (e) {
+        $("undoMsg").textContent = "되돌리기 실패: " + e.message;
+      } finally {
+        __matrixControlInflight = false;
+        setSerialUiBusy(false);
+      }
+    });
 
     async function postRouting(input_no, output_no) {
       await saveSettings();

@@ -29,7 +29,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         },
     },
     "history": {"max_items": 50},
-    "undo": {"max_items": 20},
+    "undo": {"max_items": 1},
     # 프리셋 실행 시 라우트 사이 지연 — 명세 4.7~4.8 (대략 100~200ms 권장)
     "presets": {
         "route_between_sec": 0.15,
